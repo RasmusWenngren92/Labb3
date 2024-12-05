@@ -4,20 +4,15 @@ namespace Labb3_Anropa_databasen;
 
 public class Menus
 {
-
-
-
-// - [ ]  Lägga till nya elever (kan lösas med [ADO.NET](http://ADO.NET) och SQL, annars Entity framework)
-//         Användaren får möjlighet att mata in uppgifter om en ny elev och den datan sparas då ner i databasen.
-
-// - [ ]  Lägga till ny personal (ska lösas genom Entity framework)
-// Användaren får möjlighet att mata in uppgifter om en ny anställd och den data sparas då ner i databasen.
     public static void DisplayMainMenu()
     {
+        //AnsiConsole for displaying choices presented to the user, 
+        //preventing any errors by only displaying available choices
         var choice = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
                 .Title("Please select an option from the list.")
                 .PageSize(10)
+                .MoreChoicesText("[grey](Use arrows to move up and down, then press [enter]) [/]")
                 .AddChoices("Display Staff", "Display Students", "Display Courses", "Add Student", "Add Staff"));
 
         switch (choice)
@@ -44,39 +39,104 @@ public class Menus
 
     public static void DisplayStaff()
     {
-        // - [ ]  Hämta personal (kan lösas med [ADO.NET](http://ADO.NET) och SQL, annars Entity framework)
-// Användaren får välja om denna vill se alla anställda, eller bara inom en av kategorierna så som ex lärare.
 
+        var choice = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("What do you want to show?")
+                .AddChoices("All Staff", "Only Teachers", "Main Menu"));
+        switch (choice)
+        {
+            case "All Staff":
+                DisplayAllStaff();
+                break;
+            case "Only Teachers":
+                DisplayTeachers();
+                break;
+            case "Main Menu":
+                DisplayMainMenu();
+                break;
+        }
     }
     public static void DisplayStudents()
     {
-        // - [ ]  Hämta alla elever (ska lösas med Entity framework)
-// Användaren får välja om de vill se eleverna sorterade på för- eller efternamn och om det ska vara stigande eller fallande sortering.
+       
+        var choice = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("What do you want to show?")
+                .AddChoices("Show all Students","Show all Students by Course", "Main Menu"));
 
-// - [ ]  Hämta alla elever i en viss klass (ska lösas med Entity framework)
-// Användaren ska först få se en lista med alla klasser som finns, sedan får användaren välja en av klasserna och då skrivs alla elever i den klassen ut.
-
-//     🏆 Extra utmaning (Frivillig): låt användaren även få välja sortering på eleverna som i punkten ovan.
-// - [ ]  Hämta alla betyg som satts den senaste månaden (kan lösas med [ADO.NET](http://ADO.NET) och SQL, annars Entity framework)
-//         Här får användaren direkt en lista med alla betyg som satts senaste månaden där elevens namn, kursens namn och betyget framgår.
-
+        switch (choice)
+        {
+            case "Show all Students":
+                ShowAllStudents();
+                break;
+            case "Show all Students by Course":
+                StudentsByCourse();
+                break;
+            case "Main Menu":
+                return;
+            
+        }
+        
     }
 
     public static void DisplayCourses()
     {
-        // - [ ]  Hämta en lista med alla kurser och det snittbetyg som eleverna fått på den kursen samt det högsta och lägsta betyget som någon fått i kursen (kan lösas med [ADO.NET](http://ADO.NET) och SQL, annars Entity framework)
-//         Här får användaren direkt upp en lista med alla kurser i databasen, snittbetyget samt det högsta och lägsta betyget för varje kurs.
-//             💡 Tips: Det kan vara svårt att göra detta med betyg i form av bokstäver så du kan välja att lagra betygen som siffror istället.
-
+        //Call method for displaying ALL Courses, average Grade,
+        //and lowest and highest grade
     }
 
     public static void AddStudent()
     {
-        
+        //Call Method for creating a new student
     }
 
     public static void AddStaff()
     {
+        //Call Method for creating a new student
+    }
+
+    public static void ShowAllStudents()
+    {
+        var chocie = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("How would you like to sort Students?")
+                .AddChoices("First Name", "Last Name"));
         
+        var selection = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("Select sorting order")
+                .AddChoices("Ascending", "Descending"));
+        
+        //Call method to display students in desired order {choice} {selection}
+    }
+
+    public static void StudentsByCourse()
+    {
+        var choice = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("What course would you like to sort by?")
+                .AddChoices("{INSERT CHOICES DISPLAYING Courses}"));
+        var name = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("How would you like to sort Students?")
+                .AddChoices("First Name", "Last Name"));
+        
+        var selection = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("Select sorting order")
+                .AddChoices("Ascending", "Descending"));
+        
+        //Call method to display students in desired order of {class} {name} {selection}
+    }
+
+    public static void DisplayAllStaff()
+    {
+        //Call method for displaying all staff
+    }
+
+    public static void DisplayTeachers()
+    {
+        //Call method for displaying Teachers
     }
 }
