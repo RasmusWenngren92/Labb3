@@ -1,9 +1,14 @@
+using System.Security.Principal;
 using Spectre.Console;
 
 namespace Labb3_Anropa_databasen;
 
 public class Menus
 {
+    public Menus()
+    {
+    }
+
     public static void DisplayMainMenu()
     {
         //AnsiConsole for displaying choices presented to the user, 
@@ -82,41 +87,22 @@ public class Menus
 
     public static void DisplayCourses()
     {
-        //Call method for displaying ALL Courses, average Grade,
-        //and lowest and highest grade
+        DataService.GetAllCourses();
+        
     }
 
     public static void AddStudent()
     {
-        //Call Method for creating a new student
+        DataService.AddStudent();
     }
 
     public static void AddStaff()
     {
-        //Call Method for creating a new student
+        DataService.AddStaff();
     }
 
     public static void ShowAllStudents()
     {
-        var chocie = AnsiConsole.Prompt(
-            new SelectionPrompt<string>()
-                .Title("How would you like to sort Students?")
-                .AddChoices("First Name", "Last Name"));
-        
-        var selection = AnsiConsole.Prompt(
-            new SelectionPrompt<string>()
-                .Title("Select sorting order")
-                .AddChoices("Ascending", "Descending"));
-        
-        //Call method to display students in desired order {choice} {selection}
-    }
-
-    public static void StudentsByCourse()
-    {
-        var choice = AnsiConsole.Prompt(
-            new SelectionPrompt<string>()
-                .Title("What course would you like to sort by?")
-                .AddChoices("{INSERT CHOICES DISPLAYING Courses}"));
         var name = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
                 .Title("How would you like to sort Students?")
@@ -127,16 +113,36 @@ public class Menus
                 .Title("Select sorting order")
                 .AddChoices("Ascending", "Descending"));
         
-        //Call method to display students in desired order of {class} {name} {selection}
+        DataService.GetAllStudents(name, selection);
+    }
+
+    public static void StudentsByCourse()
+    {
+        var course = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("What course would you like to sort by?")
+                .AddChoices("{INSERT CHOICES DISPLAYING Courses}"));
+        
+        var name = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("How would you like to sort Students?")
+                .AddChoices("First Name", "Last Name"));
+        
+        var selection = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("Select sorting order")
+                .AddChoices("Ascending", "Descending"));
+        
+        DataService.GetStudentsByCourse(course, name, selection);
     }
 
     public static void DisplayAllStaff()
     {
-        //Call method for displaying all staff
+        DataService.GetAllStaff();
     }
 
     public static void DisplayTeachers()
     {
-        //Call method for displaying Teachers
+        DataService.GetTeachers();
     }
 }
