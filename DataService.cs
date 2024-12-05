@@ -33,8 +33,20 @@ public class DataService
             //Call method for displaying ALL Courses, average Grade,
             //and lowest and highest grade
             connection.Open();
-            string sqlQuery = "SELECT Courses.CourseName, AVG(CAST(Grades.NumericGrade AS FLOAT)) AS AverageGrade, MIN(Grades.NumericGrade) AS MinGrade, MAX(Grades.NumericGrade) AS MaxGrade FROM Grades JOIN Enrollments ON Grades.EnrollmentID_FK = Enrollments.EnrollmentID JOIN Courses ON Enrollments.CourseID_FK  = Courses.CourseID GROUP BY Courses.CourseName;";
-            
+            string sqlQuery = @"
+            SELECT 
+                Courses.CourseName, 
+                 CEILING(AVG(CAST(Grades.NumericGrade AS FLOAT)) * 10) / 10.0 AS AverageGrade, 
+                MIN(Grades.NumericGrade) AS MinGrade, 
+                MAX(Grades.NumericGrade) AS MaxGrade
+            FROM 
+                Grades
+            JOIN 
+                Enrollments ON Grades.EnrollmentID_FK = Enrollments.EnrollmentID
+            JOIN 
+                Courses ON Enrollments.CourseID_FK = Courses.CourseID
+            GROUP BY 
+                Courses.CourseName;";
             using (SqlCommand command = new SqlCommand(sqlQuery, connection))
             {
                 using (SqlDataReader reader = command.ExecuteReader())
@@ -44,9 +56,8 @@ public class DataService
 
                     while (reader.Read())
                     {
-                      
-                        Console.WriteLine($"Course : {reader["CourseName"]} {reader ["NumericGrade"]}" +
-                                          $"{reader["MinGrade"]} {reader["MaxGrade"]}");
+                        Console.WriteLine($"Course: {reader["CourseName"]}, Average: {reader["AverageGrade"]}, " +
+                                          $"Min: {reader["MinGrade"]}, Max: {reader["MaxGrade"]}");
                     }
                 }
             }
