@@ -18,7 +18,7 @@ public class Menus
                 .Title("Please select an option from the list.")
                 .PageSize(10)
                 .MoreChoicesText("[grey](Use arrows to move up and down, then press [enter]) [/]")
-                .AddChoices("Display Staff", "Display Students", "Display Courses", "Add Student", "Add Staff"));
+                .AddChoices("Display Staff", "Display Students", "Display Courses", "Display Grades", "Add Student", "Add Staff"));
 
         switch (choice)
         {
@@ -30,6 +30,9 @@ public class Menus
                 break;
             case "Display Courses":
                 DisplayCourses();
+                break;
+            case "Display Grades":
+                DisplayGrades();
                 break;
             case "Add Student":
                 AddStudent();
@@ -79,6 +82,7 @@ public class Menus
                 StudentsByCourse();
                 break;
             case "Main Menu":
+                DisplayMainMenu();
                 return;
             
         }
@@ -88,7 +92,6 @@ public class Menus
     public static void DisplayCourses()
     {
         DataService.GetAllCourses();
-        
     }
 
     public static void AddStudent()
@@ -144,5 +147,10 @@ public class Menus
     public static void DisplayTeachers()
     {
         DataService.GetTeachers();
+    }
+
+    public static void DisplayGrades()
+    {
+        DataService.GetAllGrades();
     }
 }

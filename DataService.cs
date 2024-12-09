@@ -1,11 +1,14 @@
+using Labb3_Anropa_databasen.Data;
+using Labb3_Anropa_databasen.Models;
 using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 
 namespace Labb3_Anropa_databasen;
 
-public class DataService
+public class DataService : DbContext
 {
     private const string ConnectionString = @"Server=(localdb)\MSSQLLocalDB;Database=SchoolDB;Trusted_Connection=True;";
-    private const string lines = "---------------------------";
+    private const string Lines = "---------------------------";
     
 
     public static void GetAllStaff()
@@ -13,20 +16,24 @@ public class DataService
         using (SqlConnection conn = new SqlConnection(ConnectionString))
         {
             conn.Open();
-            string sqlQuery = @"SELECT * FROM Staff";
+            string sqlQuery = @"SELECT FirstName, LastName, Role,HireDate, Subject FROM Employees";
             using (SqlCommand command = new SqlCommand(sqlQuery, conn))
             {
                 using (SqlDataReader reader = command.ExecuteReader())
                 {
                     Console.WriteLine("Staff");
-                    Console.WriteLine(lines);
+
+                    Console.WriteLine(Lines);
 
                     while (reader.Read())
                     {
-                        Console.WriteLine($"Role: {reader["Role"],-25} | First Name: {reader["First Name"], -10} | " +
-                                          $"Last Name: {reader["Last Name"], -5} | Subject: {reader["Subject"]}");
+                        
+                        Console.WriteLine($"First Name: {reader["FirstName"],-10} | Last Name: {reader["LastName"], -15} | " +
+                                          $"Role: {reader["Role"], -10} | Subject: {reader["Subject"], -18} | Hire Date {reader["HireDate"]}");
                     }
-
+                    Thread.Sleep(2000);
+                    Console.WriteLine("Returning to Main Menu");
+                    Menus.DisplayMainMenu();
                 }
             }
         }
@@ -34,17 +41,69 @@ public class DataService
 
     public static void GetTeachers()
     {
-        
+        using (SqlConnection conn = new SqlConnection(ConnectionString))
+        {
+            conn.Open();
+            string sqlQuery = @"SELECT FirstName, LastName, Role,HireDate, Subject FROM Employees WHERE Role = 'Teacher'";
+            using (SqlCommand command = new SqlCommand(sqlQuery, conn))
+            {
+                using (SqlDataReader reader = command.ExecuteReader())
+                {
+                    Console.WriteLine("Teachers");
+
+                    Console.WriteLine(Lines);
+
+                    while (reader.Read())
+                    {
+                        
+                        Console.WriteLine($"First Name: {reader["FirstName"],-10} | Last Name: {reader["LastName"], -15} | " +
+                                          $"Role: {reader["Role"], -10} | Subject: {reader["Subject"], -18} | Hire Date {reader["HireDate"]}");
+                    }
+                    Thread.Sleep(2000);
+                    Console.WriteLine("Returning to Main Menu");
+                    Menus.DisplayMainMenu();
+                }
+            }
+        }
     }
 
     public static void GetAllStudents(string name, string selection)
     {
-        
-    }
+        string sortBy = name.Equals("FirstName", StringComparison.OrdinalIgnoreCase) ? "firstname" : "lastname";
+        bool ascending = selection.Equals("Ascending", StringComparison.OrdinalIgnoreCase);
 
+        using (var context = new SchoolDbContext())
+        {
+            var students = ascending
+                ? context.Students.OrderBy(s => sortBy == "firstname" ? s.FirstName : s.LastName)
+                : context.Students.OrderByDescending(s => sortBy == "firstname" ? s.FirstName : s.LastName);
+
+            Console.WriteLine("Students:");
+            Console.WriteLine(Lines);
+
+            foreach (var student in students)
+            {
+                Console.WriteLine(
+                    $"First Name: {student.FirstName,-10} | Last Name: {student.LastName,-15} | Enrollment Date: {student.EnrollmentDate}");
+            }
+            Thread.Sleep(2000);
+            Console.WriteLine("Returning to Main Menu");
+            Menus.DisplayMainMenu();
+        }
+    }
+    
     public static void GetStudentsByCourse(string course, string name, string selection)
     {
-        
+        string sortBy = name.Equals("FirstName", StringComparison.OrdinalIgnoreCase) ? "firstname" : "lastname";
+        bool ascending = selection.Equals("Ascending", StringComparison.OrdinalIgnoreCase);
+
+        using (var context = new SchoolDbContext())
+        {
+            
+        }
+        Thread.Sleep(2000);
+        Console.WriteLine("Returning to Main Menu");
+        Menus.DisplayMainMenu();
     }
 
     public static void GetAllCourses()
@@ -70,8 +129,9 @@ public class DataService
             {
                 using (SqlDataReader reader = command.ExecuteReader())
                 {
+                    
                     Console.WriteLine("Courses");
-                    Console.WriteLine(lines);
+                    Console.WriteLine(Lines);
 
                    
                     while (reader.Read())
@@ -81,6 +141,9 @@ public class DataService
                                           $"Min Grade: {reader["MinGrade"], -5} | Max Grade: {reader["MaxGrade"]}");
 
                     }
+                    Thread.Sleep(2000);
+                    Console.WriteLine("Returning to Main Menu");
+                    Menus.DisplayMainMenu();
                 }
             }
         }
@@ -95,4 +158,10 @@ public class DataService
     {
         // string FirstName, string LastName, string Role, DateTime HireDate, string Subject
     }
+
+    public static void GetAllGrades()
+    {
+        
+    }
+    
 }
