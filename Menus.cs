@@ -1,4 +1,7 @@
 using System.Security.Principal;
+using System.Xml;
+using Labb3_Anropa_databasen.Data;
+using Labb3_Anropa_databasen.Models;
 using Spectre.Console;
 
 namespace Labb3_Anropa_databasen;
@@ -13,12 +16,13 @@ public class Menus
     {
         //AnsiConsole for displaying choices presented to the user, 
         //preventing any errors by only displaying available choices
+        Console.Clear();
         var choice = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
                 .Title("Please select an option from the list.")
                 .PageSize(10)
                 .MoreChoicesText("[grey](Use arrows to move up and down, then press [enter]) [/]")
-                .AddChoices("Display Staff", "Display Students", "Display Courses", "Display Grades", "Add Student", "Add Staff"));
+                .AddChoices("Display Staff", "Display Students", "Display Courses", "Display Grades", "Add Student", "Add Staff","Exit"));
 
         switch (choice)
         {
@@ -41,6 +45,9 @@ public class Menus
                 AddStaff();
                 break;
             case "Exit":
+                Console.Clear();
+                Console.WriteLine("\n\tBye bye :) ");
+                Thread.Sleep(2000);
                 return;
         }
     }
@@ -121,22 +128,42 @@ public class Menus
 
     public static void StudentsByCourse()
     {
-        var course = AnsiConsole.Prompt(
-            new SelectionPrompt<string>()
-                .Title("What course would you like to sort by?")
-                .AddChoices("{INSERT CHOICES DISPLAYING Courses}"));
+        using (var context = new SchoolDbContext())
+        {
+            
+            var indentedCourses = context.Courses
+                        .ToDictionary(course => $"  {course.CourseName}", course => course);
+                    
+                    var courseName = AnsiConsole.Prompt(
+                        new SelectionPrompt<string>()
+                            .Title("What course would you like to sort by?")
+                            .AddChoices(indentedCourses.Keys)
+                        );
+                        
+                        var selectedCourse = indentedCourses.Values
+                            .FirstOrDefault(c => c.CourseName.Equals(courseName.Trim(), StringComparison.OrdinalIgnoreCase));
+
+                        if (selectedCourse == null)
+                        {
+                            Console.WriteLine("No course selected.");
+                            return;
+                        }
+                    
+                    var name = AnsiConsole.Prompt(
+                        new SelectionPrompt<string>()
+                            .Title("How would you like to sort Students?")
+                            .AddChoices("First Name", "Last Name")
+                        );
+                    
+                    var selection = AnsiConsole.Prompt(
+                        new SelectionPrompt<string>()
+                            .Title("Select sorting order")
+                            .AddChoices("Ascending", "Descending")
+                        );
+                    
+                        DataService.GetStudentsByCourse(selectedCourse.CourseId, name, selection);
+        }
         
-        var name = AnsiConsole.Prompt(
-            new SelectionPrompt<string>()
-                .Title("How would you like to sort Students?")
-                .AddChoices("First Name", "Last Name"));
-        
-        var selection = AnsiConsole.Prompt(
-            new SelectionPrompt<string>()
-                .Title("Select sorting order")
-                .AddChoices("Ascending", "Descending"));
-        
-        DataService.GetStudentsByCourse(course, name, selection);
     }
 
     public static void DisplayAllStaff()
@@ -151,6 +178,31 @@ public class Menus
 
     public static void DisplayGrades()
     {
-        DataService.GetAllGrades();
+    
+        var choice = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("What do you want to show?")
+                .AddChoices("New Grades", "All Grades", "Main Menu"));
+
+        switch (choice)
+        {
+            case "New Grades":
+                Console.WriteLine("Fetching new grades...");
+                Thread.Sleep(2000);
+                DataService.GetNewGrades();
+                break;
+
+            case "All Grades":
+                Console.WriteLine("Fetching all grades...");
+                Thread.Sleep(2000);
+                DataService.GetAllGrades();  
+                break;
+
+            case "Main Menu":
+                Console.WriteLine("Returning to main menu...");
+                DisplayMainMenu();
+                break;
+        }
+        
     }
 }
