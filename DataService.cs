@@ -1,12 +1,11 @@
+using System.Text.RegularExpressions;
 using Labb3_Anropa_databasen.Data;
-using Labb3_Anropa_databasen.Models;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Query;
 
 namespace Labb3_Anropa_databasen;
 
-public class DataService : DbContext
+public partial class DataService : DbContext
 {
     private const string ConnectionString = @"Server=(localdb)\MSSQLLocalDB;Database=SchoolDB;Trusted_Connection=True;";
     private const string Lines = "---------------------------";
@@ -162,7 +161,46 @@ public class DataService : DbContext
 
     public static void AddStudent()
     {
-        // string FirstName, string LastName, DateTime EnrollmentDate, string Gender, DateTime BirthDate
+        
+        string firstName = CheckInput("Enter Student First Name: ");
+        
+        string lastName = CheckInput("Enter Student Last Name: ");
+
+        Console.WriteLine("Enter Gender(Optional): ");
+        string? gender = Console.ReadLine();
+
+        Console.WriteLine("Enter Birth Date (yyyy-mm-dd): ");
+        DateTime birthDate;
+        while (!DateTime.TryParse(Console.ReadLine(), out birthDate))
+        {
+            Console.WriteLine("Invalid date format. Please enter again (yyyy-mm-dd)");
+        }
+
+        string sqlQuery =
+            @"INSERT INTO Students (FirstName, LastName, Gender, BirthDate) VALUES (@FirstName, @LastName, @Gender, @BirthDate)";
+        using (SqlConnection conn = new SqlConnection(ConnectionString))
+        {
+            conn.Open();
+            using (SqlCommand command = new SqlCommand(sqlQuery, conn))
+            {
+                command.Parameters.AddWithValue("@FirstName", firstName);
+                command.Parameters.AddWithValue("@LastName", lastName);
+                command.Parameters.AddWithValue("@Gender", gender);
+                command.Parameters.AddWithValue("@BirthDate", birthDate);
+                
+                int rowsAffected = command.ExecuteNonQuery();
+                if (rowsAffected > 0)
+                {
+                    Console.WriteLine("Student Added");
+                }
+
+                Console.WriteLine("\n\tPress Enter to return to Main Menu");
+                Console.ReadLine();
+                Menus.DisplayMainMenu();
+            }
+            
+        }
+
     }
 
     public static void AddStaff()
@@ -254,4 +292,27 @@ public class DataService : DbContext
 
         }
     }
+
+    private static string CheckInput(string prompt)
+    {
+        while (true)
+        {
+            Console.WriteLine(prompt);
+            var input = Console.ReadLine();
+
+            if (input != null && !MyRegex().IsMatch(input))
+            {
+                return input;
+            }
+            else
+            {
+                Console.WriteLine("Input cannot contain numbers.");
+            }
+
+            Console.WriteLine("Input cannot be empty.");
+        }
+    }
+
+    [GeneratedRegex(@"^[a-öA-Ö]+$")]
+    private static partial Regex MyRegex();
 }
