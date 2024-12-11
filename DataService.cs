@@ -27,10 +27,11 @@ public partial class DataService : DbContext
 
                     while (reader.Read())
                     {
+                        string hireDate = reader["HireDate"] is DateTime date ? date.ToString("yyyy-MM-dd") : string.Empty;
 
                         Console.WriteLine(
                             $"First Name: {reader["FirstName"],-10} | Last Name: {reader["LastName"],-15} | " +
-                            $"Role: {reader["Role"],-10} | Subject: {reader["Subject"],-18} | Hire Date {reader["HireDate"]}");
+                            $"Role: {reader["Role"],-10} | Subject: {reader["Subject"],-18} | Hire Date {hireDate}");
                     }
 
                     
@@ -48,7 +49,7 @@ public partial class DataService : DbContext
         {
             conn.Open();
             string sqlQuery =
-                @"SELECT FirstName, LastName, Role,HireDate, Subject FROM Employees WHERE Role = 'Teacher'";
+                @"SELECT FirstName, LastName, Role, HireDate, Subject FROM Employees WHERE Role = 'Teacher'";
             using (SqlCommand command = new SqlCommand(sqlQuery, conn))
             {
                 using (SqlDataReader reader = command.ExecuteReader())
@@ -59,10 +60,11 @@ public partial class DataService : DbContext
 
                     while (reader.Read())
                     {
-
+                        string hireDate = reader["HireDate"] is DateTime date ? date.ToString("yyyy-MM-dd") : string.Empty;
+                        
                         Console.WriteLine(
                             $"First Name: {reader["FirstName"],-10} | Last Name: {reader["LastName"],-15} | " +
-                            $"Role: {reader["Role"],-10} | Subject: {reader["Subject"],-18} | Hire Date {reader["HireDate"]}");
+                            $"Role: {reader["Role"],-10} | Subject: {reader["Subject"],-18} | Hire Date: {hireDate}");
                     }
 
                     Console.WriteLine("\n\tPress Enter to return to Main Menu");
@@ -206,7 +208,60 @@ public partial class DataService : DbContext
 
     public static void AddStaff()
     {
-        // string FirstName, string LastName, string Role, DateTime HireDate, string Subject
+        
+        string firstName = CheckInput("Enter Staff First Name: ");
+        
+        string lastName = CheckInput("Enter Staff Last Name: ");
+
+        string role = CheckInput("Enter Staff Role: ");
+
+        Console.WriteLine("Enter Hire Date (yyyy-mm-dd): " +
+                          "(If you want to use today's date press enter.)");
+        DateTime hireDate;
+        string? hireDateInput = Console.ReadLine();
+        if (string.IsNullOrWhiteSpace(hireDateInput))
+        {
+            hireDate = DateTime.Now;
+            Console.WriteLine("Today's date used.");
+        }
+        else
+        {
+             while (!DateTime.TryParse(Console.ReadLine(), out hireDate))
+             {
+                 Console.WriteLine("Invalid date format. Please enter again (yyyy-mm-dd)");
+             }
+        }
+       
+        string? subject = CheckInput("Enter Staff Subject : (Optional)");
+        subject = string.IsNullOrWhiteSpace(subject) ? "" : subject;
+        
+        string sqlQuery =
+            @"INSERT INTO Employees (FirstName, LastName, Role, HireDate, Subject) VALUES (@FirstName, @LastName, @Role, @HireDate, @Subject)";
+        using (SqlConnection conn = new SqlConnection(ConnectionString))
+        {
+            conn.Open();
+            using (SqlCommand command = new SqlCommand(sqlQuery, conn))
+            {
+                command.Parameters.AddWithValue("@FirstName", firstName);
+                command.Parameters.AddWithValue("@LastName", lastName);
+                command.Parameters.AddWithValue("@Role", role);
+                command.Parameters.AddWithValue("@HireDate", hireDate);
+                command.Parameters.AddWithValue("@Subject", subject);
+                
+                
+                int rowsAffected = command.ExecuteNonQuery();
+                if (rowsAffected > 0)
+                {
+                    Console.WriteLine("Staff Added");
+                }
+
+                Console.WriteLine("\n\tPress Enter to return to Main Menu");
+                Console.ReadLine();
+                Menus.DisplayMainMenu();
+            }
+            
+        }
+        
     }
 
     public static void GetNewGrades()
@@ -307,17 +362,13 @@ public partial class DataService : DbContext
                 continue;
             }
 
-            if (!MyRegex().IsMatch(input))
-            {
-                Console.WriteLine("Input can only contain alphanumeric characters.");
-                continue;
-            }
-
-            return input;
+            if (MyRegex().IsMatch(input)) return input;
+            Console.WriteLine("Input can only contain alphanumeric characters.");
+           
         }
         
     }
 
-    [GeneratedRegex(@"^[a-öA-Ö]+$")]
+    [GeneratedRegex(@"^[a-öA-Ö\s]+$")]
     private static partial Regex MyRegex();
 }
