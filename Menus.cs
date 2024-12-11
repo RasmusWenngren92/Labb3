@@ -130,40 +130,38 @@ public class Menus
     {
         using (var context = new SchoolDbContext())
         {
-            
             var indentedCourses = context.Courses
-                        .ToDictionary(course => $"  {course.CourseName}", course => course);
-                    
-                    var courseName = AnsiConsole.Prompt(
-                        new SelectionPrompt<string>()
-                            .Title("What course would you like to sort by?")
-                            .AddChoices(indentedCourses.Keys)
-                        );
-                        
-                        var selectedCourse = indentedCourses.Values
-                            .FirstOrDefault(c => c.CourseName.Equals(courseName.Trim(), StringComparison.OrdinalIgnoreCase));
+                .ToDictionary(course => $"  {course.CourseName}", course => course);
 
-                        if (selectedCourse == null)
-                        {
-                            Console.WriteLine("No course selected.");
-                            return;
-                        }
-                    
-                    var name = AnsiConsole.Prompt(
-                        new SelectionPrompt<string>()
-                            .Title("How would you like to sort Students?")
-                            .AddChoices("First Name", "Last Name")
-                        );
-                    
-                    var selection = AnsiConsole.Prompt(
-                        new SelectionPrompt<string>()
-                            .Title("Select sorting order")
-                            .AddChoices("Ascending", "Descending")
-                        );
-                    
-                        DataService.GetStudentsByCourse(selectedCourse.CourseId, name, selection);
+            var courseName = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .Title("What course would you like to sort by?")
+                    .AddChoices(indentedCourses.Keys)
+            );
+
+            var selectedCourse = indentedCourses.Values
+                .FirstOrDefault(c => c.CourseName.Equals(courseName.Trim(), StringComparison.OrdinalIgnoreCase));
+
+            if (selectedCourse == null)
+            {
+                Console.WriteLine("No course selected.");
+                return;
+            }
+
+            var name = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .Title("How would you like to sort Students?")
+                    .AddChoices("First Name", "Last Name")
+            );
+
+            var selection = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .Title("Select sorting order")
+                    .AddChoices("Ascending", "Descending")
+            );
+
+            DataService.GetStudentsByCourse(selectedCourse.CourseId, name, selection);
         }
-        
     }
 
     public static void DisplayAllStaff()
