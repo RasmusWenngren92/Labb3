@@ -72,6 +72,7 @@ public class Menus
                 break;
         }
     }
+    
     public static void DisplayStudents()
     {
        
@@ -185,13 +186,13 @@ public class Menus
         switch (choice)
         {
             case "New Grades":
-                Console.WriteLine("Fetching new grades...");
+                Console.WriteLine("\n\tFetching new grades...");
                 Thread.Sleep(2000);
                 DataService.GetNewGrades();
                 break;
 
             case "All Grades":
-                Console.WriteLine("Fetching all grades...");
+                Console.WriteLine("\n\tFetching all grades...");
                 Thread.Sleep(2000);
                 DataService.GetAllGrades();  
                 break;

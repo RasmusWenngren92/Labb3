@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using Labb3_Anropa_databasen.Data;
+using Labb3_Anropa_databasen.Models;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,7 +9,7 @@ namespace Labb3_Anropa_databasen;
 public partial class DataService : DbContext
 {
     private const string ConnectionString = @"Server=(localdb)\MSSQLLocalDB;Database=SchoolDB;Trusted_Connection=True;";
-    private const string Lines = "---------------------------";
+    private static readonly string Lines = new ('-', 60);
 
 
     public static void GetAllStaff()
@@ -85,14 +86,27 @@ public partial class DataService : DbContext
             var students = ascending
                 ? context.Students.OrderBy(s => sortBy == "firstname" ? s.FirstName : s.LastName)
                 : context.Students.OrderByDescending(s => sortBy == "firstname" ? s.FirstName : s.LastName);
-
-            Console.WriteLine("Students:");
+            
+            Console.ForegroundColor = ConsoleColor.DarkGreen;
+            Console.WriteLine("\n\tStudents:");
+            Console.ResetColor();
             Console.WriteLine(Lines);
+            Console.ForegroundColor = ConsoleColor.DarkRed;
+            Console.WriteLine("{0,-17} | {1,-20} | {2,-25} ", 
+                "First Name", "Last Name", "Enrollment Date");
+            Console.ResetColor();
+            Console.WriteLine(Lines);
+            
 
             foreach (var student in students)
             {
                 Console.WriteLine(
-                    $"First Name: {student.FirstName,-10} | Last Name: {student.LastName,-15} | Enrollment Date: {student.EnrollmentDate}");
+                    "{0,-17} | {1,-20} | {2,-15}",
+                    student.FirstName,
+                    student.LastName,
+                    student.EnrollmentDate
+                );
+               
             }
 
             Console.WriteLine("\n\tPress Enter to return to Main Menu");
@@ -103,17 +117,65 @@ public partial class DataService : DbContext
 
     public static void GetStudentsByCourse(int courseId, string name, string selection)
     {
-        string sortBy = name.Equals("FirstName", StringComparison.OrdinalIgnoreCase) ? "Firstname" : "Lastname";
-        bool ascending = selection.Equals("Ascending", StringComparison.OrdinalIgnoreCase);
-
         using (var context = new SchoolDbContext())
         {
+            var course = context.Courses.FirstOrDefault(c => c.CourseId == courseId);
+            
+            var query = context.Enrollments
+                .Where(e => e.CourseIdFk == courseId)
+                .Join(context.Students,
+                    enrollment => enrollment.StudentIdFk,
+                    student => student.StudentId,
+                    (enrollment, student) => new { Enrollment = enrollment, Student = student })
+                .AsQueryable();
+            
+            query = name.Equals("First Name", StringComparison.OrdinalIgnoreCase)
+                ? (selection.Equals("Ascending", StringComparison.OrdinalIgnoreCase)
+                    ? query.OrderBy(x => x.Student.FirstName)
+                    : query.OrderByDescending(x => x.Student.FirstName))
+                : (selection.Equals("Ascending", StringComparison.OrdinalIgnoreCase)
+                    ? query.OrderBy(x => x.Student.LastName)
+                    : query.OrderByDescending(x => x.Student.LastName));
+            
+            var students = query.ToList();
 
+            Console.ForegroundColor = ConsoleColor.DarkGreen;
+            Console.WriteLine($"\n\tStudents in Course: {course?.CourseName}");
+            Console.ResetColor();
+            
+            int lineLenght = Math.Max(65, (course?.CourseName?.Length ?? 0) + 17);
+            string lines = new string('-', lineLenght);
+            
+            Console.WriteLine(lines);
+            Console.ForegroundColor = ConsoleColor.DarkRed;
+            Console.WriteLine("{0,-17} | {1,-20} | {2,-25} ", 
+                "Course", "First Name", "Last Name");
+            Console.ResetColor();
+            Console.WriteLine(lines);
+
+            foreach (var item in students)
+            {
+                
+                Console.WriteLine(
+                    "{0,-17} | {1,-20} | {2,-15}",
+                    course?.CourseName ?? "N/A",
+                    item.Student.FirstName,
+                    item.Student.LastName
+                );
+            }
+
+            if (!students.Any())
+            {
+                Console.WriteLine("No students found in this course.");
+            }
+
+            Console.WriteLine("\n\tPress Enter to return to Main Menu");
+            Console.ReadLine();
+            Menus.DisplayMainMenu();
+           
         }
 
-        Console.WriteLine("\n\tPress Enter to return to Main Menu");
-        Console.ReadLine();
-        Menus.DisplayMainMenu();
+        
     }
 
     public static void GetAllCourses()
@@ -371,4 +433,5 @@ public partial class DataService : DbContext
 
     [GeneratedRegex(@"^[a-öA-Ö\s]+$")]
     private static partial Regex MyRegex();
+    
 }
