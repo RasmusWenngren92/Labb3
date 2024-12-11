@@ -3,6 +3,7 @@ using Labb3_Anropa_databasen.Data;
 using Labb3_Anropa_databasen.Models;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Spectre.Console;
 
 namespace Labb3_Anropa_databasen;
 
@@ -14,38 +15,62 @@ public partial class DataService : DbContext
 
     public static void GetAllStaff()
     {
+        var table = new Table()
+            .Centered()
+            .Border(TableBorder.Rounded)
+            .AddColumn("[blue]First Name[/]")
+            .AddColumn("[blue]Last Name[/]")
+            .AddColumn("[blue]Role[/]")
+            .AddColumn("[blue]Subject[/]")
+            .AddColumn("[blue]Hire Date[/]");
+        
         using (SqlConnection conn = new SqlConnection(ConnectionString))
         {
             conn.Open();
-            string sqlQuery = @"SELECT FirstName, LastName, Role,HireDate, Subject FROM Employees";
+            string sqlQuery = @"SELECT FirstName, LastName, Role, HireDate, Subject FROM Employees";
             using (SqlCommand command = new SqlCommand(sqlQuery, conn))
             {
                 using (SqlDataReader reader = command.ExecuteReader())
                 {
-                    Console.WriteLine("Staff");
-
-                    Console.WriteLine(Lines);
-
+                    
                     while (reader.Read())
                     {
-                        string hireDate = reader["HireDate"] is DateTime date ? date.ToString("yyyy-MM-dd") : string.Empty;
-
-                        Console.WriteLine(
-                            $"First Name: {reader["FirstName"],-10} | Last Name: {reader["LastName"],-15} | " +
-                            $"Role: {reader["Role"],-10} | Subject: {reader["Subject"],-18} | Hire Date {hireDate}");
+                        string hireDate = reader.IsDBNull(3) ? "N/A" : reader.GetDateTime(3).ToString("yyyy-MM-dd");
+                        table.AddRow(
+                            reader.GetString(0),
+                            reader.GetString(1),
+                            reader.GetString(2),
+                            reader.IsDBNull(4) ? "N/A" : reader.GetString(4),
+                            hireDate
+                        );
                     }
-
-                    
-                    Console.WriteLine("\n\tPress Enter to return to Main Menu");
-                    Console.ReadLine();
-                    Menus.DisplayMainMenu();
                 }
             }
         }
+        Console.ForegroundColor = ConsoleColor.DarkRed;
+        AnsiConsole.Write(new Rule("\n\tAll staff: ").Centered());
+        Console.ResetColor();
+        AnsiConsole.Write(table);
+        Console.ForegroundColor = ConsoleColor.DarkRed;
+        AnsiConsole.Write(new Rule("\n\tPress any key to return ").Centered());
+        Console.ResetColor();
+        Console.ReadLine();
+        Menus.DisplayMainMenu();
+        
     }
 
     public static void GetTeachers()
     {
+        
+        var table = new Table()
+            .Centered()
+            .Border(TableBorder.Rounded)
+            .AddColumn("[blue]First Name[/]")
+            .AddColumn("[blue]Last Name[/]")
+            .AddColumn("[blue]Role[/]")
+            .AddColumn("[blue]Subject[/]")
+            .AddColumn("[blue]Hire Date[/]");
+
         using (SqlConnection conn = new SqlConnection(ConnectionString))
         {
             conn.Open();
@@ -55,25 +80,30 @@ public partial class DataService : DbContext
             {
                 using (SqlDataReader reader = command.ExecuteReader())
                 {
-                    Console.WriteLine("Teachers");
-
-                    Console.WriteLine(Lines);
-
                     while (reader.Read())
                     {
-                        string hireDate = reader["HireDate"] is DateTime date ? date.ToString("yyyy-MM-dd") : string.Empty;
-                        
-                        Console.WriteLine(
-                            $"First Name: {reader["FirstName"],-10} | Last Name: {reader["LastName"],-15} | " +
-                            $"Role: {reader["Role"],-10} | Subject: {reader["Subject"],-18} | Hire Date: {hireDate}");
+                        string hireDate = reader.IsDBNull(3) ? "N/A" : reader.GetDateTime(3).ToString("yyyy-MM-dd");
+                        table.AddRow(
+                            reader.GetString(0),
+                            reader.GetString(1),
+                            reader.GetString(2),
+                            reader.IsDBNull(4) ? "N/A" : reader.GetString(4),
+                            hireDate
+                        );
                     }
-
-                    Console.WriteLine("\n\tPress Enter to return to Main Menu");
-                    Console.ReadLine();
-                    Menus.DisplayMainMenu();
+                    
                 }
             }
         }
+        Console.ForegroundColor = ConsoleColor.DarkRed;
+        AnsiConsole.Write(new Rule("\n\tAll teachers: ").Centered());
+        Console.ResetColor();
+        AnsiConsole.Write(table);
+        Console.ForegroundColor = ConsoleColor.DarkRed;
+        AnsiConsole.Write(new Rule("\n\tPress any key to return ").Centered());
+        Console.ResetColor();
+        Console.ReadLine();
+        Menus.DisplayMainMenu();
     }
 
     public static void GetAllStudents(string name, string selection)
