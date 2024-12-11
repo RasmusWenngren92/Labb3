@@ -108,6 +108,13 @@ public partial class DataService : DbContext
 
     public static void GetAllStudents(string name, string selection)
     {
+        var table = new Table()
+            .Centered()
+            .Border(TableBorder.Rounded)
+            .AddColumn("[blue]First Name[/]")
+            .AddColumn("[blue]Last Name[/]")
+            .AddColumn("[blue]EnrollmentDate[/]");
+        
         string sortBy = name.Equals("FirstName", StringComparison.OrdinalIgnoreCase) ? "firstname" : "lastname";
         bool ascending = selection.Equals("Ascending", StringComparison.OrdinalIgnoreCase);
 
@@ -116,33 +123,26 @@ public partial class DataService : DbContext
             var students = ascending
                 ? context.Students.OrderBy(s => sortBy == "firstname" ? s.FirstName : s.LastName)
                 : context.Students.OrderByDescending(s => sortBy == "firstname" ? s.FirstName : s.LastName);
-            
-            Console.ForegroundColor = ConsoleColor.DarkGreen;
-            Console.WriteLine("\n\tStudents:");
-            Console.ResetColor();
-            Console.WriteLine(Lines);
-            Console.ForegroundColor = ConsoleColor.DarkRed;
-            Console.WriteLine("{0,-17} | {1,-20} | {2,-25} ", 
-                "First Name", "Last Name", "Enrollment Date");
-            Console.ResetColor();
-            Console.WriteLine(Lines);
-            
 
             foreach (var student in students)
             {
-                Console.WriteLine(
-                    "{0,-17} | {1,-20} | {2,-15}",
-                    student.FirstName,
-                    student.LastName,
-                    student.EnrollmentDate
-                );
-               
+                string? enrollmentDate = student.EnrollmentDate.ToString();
+                if (enrollmentDate != null)
+                    table.AddRow(
+                        student.FirstName,
+                        student.LastName,
+                        enrollmentDate);
             }
-
-            Console.WriteLine("\n\tPress Enter to return to Main Menu");
-            Console.ReadLine();
-            Menus.DisplayMainMenu();
         }
+        Console.ForegroundColor = ConsoleColor.DarkRed;
+        AnsiConsole.Write(new Rule("\n\tAll Students: ").Centered());
+        Console.ResetColor();
+        AnsiConsole.Write(table);
+        Console.ForegroundColor = ConsoleColor.DarkRed;
+        AnsiConsole.Write(new Rule("\n\tPress any key to return ").Centered());
+        Console.ResetColor();
+        Console.ReadLine();
+        Menus.DisplayMainMenu();
     }
 
     public static void GetStudentsByCourse(int courseId, string name, string selection)
