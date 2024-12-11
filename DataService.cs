@@ -175,9 +175,9 @@ public partial class DataService : DbContext
         {
             Console.WriteLine("Invalid date format. Please enter again (yyyy-mm-dd)");
         }
-
+        
         string sqlQuery =
-            @"INSERT INTO Students (FirstName, LastName, Gender, BirthDate) VALUES (@FirstName, @LastName, @Gender, @BirthDate)";
+            @"INSERT INTO Students (FirstName, LastName, Gender, BirthDate, EnrollmentDate) VALUES (@FirstName, @LastName, @Gender, @BirthDate, @EnrollmentDate)";
         using (SqlConnection conn = new SqlConnection(ConnectionString))
         {
             conn.Open();
@@ -187,6 +187,7 @@ public partial class DataService : DbContext
                 command.Parameters.AddWithValue("@LastName", lastName);
                 command.Parameters.AddWithValue("@Gender", gender);
                 command.Parameters.AddWithValue("@BirthDate", birthDate);
+                command.Parameters.AddWithValue("@EnrollmentDate", DateTime.Now);
                 
                 int rowsAffected = command.ExecuteNonQuery();
                 if (rowsAffected > 0)
@@ -300,17 +301,21 @@ public partial class DataService : DbContext
             Console.WriteLine(prompt);
             var input = Console.ReadLine();
 
-            if (input != null && !MyRegex().IsMatch(input))
+            if (string.IsNullOrEmpty(input))
             {
-                return input;
-            }
-            else
-            {
-                Console.WriteLine("Input cannot contain numbers.");
+                Console.WriteLine("Input cannot be empty.");
+                continue;
             }
 
-            Console.WriteLine("Input cannot be empty.");
+            if (!MyRegex().IsMatch(input))
+            {
+                Console.WriteLine("Input can only contain alphanumeric characters.");
+                continue;
+            }
+
+            return input;
         }
+        
     }
 
     [GeneratedRegex(@"^[a-öA-Ö]+$")]
