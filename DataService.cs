@@ -1,6 +1,5 @@
 using System.Text.RegularExpressions;
 using Labb3_Anropa_databasen.Data;
-using Labb3_Anropa_databasen.Models;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Spectre.Console;
@@ -15,15 +14,6 @@ public partial class DataService : DbContext
 
     public static void GetAllStaff()
     {
-        var table = new Table()
-            .Centered()
-            .Border(TableBorder.Rounded)
-            .AddColumn("[blue]First Name[/]")
-            .AddColumn("[blue]Last Name[/]")
-            .AddColumn("[blue]Role[/]")
-            .AddColumn("[blue]Subject[/]")
-            .AddColumn("[blue]Hire Date[/]");
-        
         using (SqlConnection conn = new SqlConnection(ConnectionString))
         {
             conn.Open();
@@ -32,45 +22,38 @@ public partial class DataService : DbContext
             {
                 using (SqlDataReader reader = command.ExecuteReader())
                 {
-                    
+                    var data = new List<Dictionary<string, string>>();
                     while (reader.Read())
                     {
-                        string hireDate = reader.IsDBNull(3) ? "N/A" : reader.GetDateTime(3).ToString("yyyy-MM-dd");
-                        table.AddRow(
-                            reader.GetString(0),
-                            reader.GetString(1),
-                            reader.GetString(2),
-                            reader.IsDBNull(4) ? "N/A" : reader.GetString(4),
-                            hireDate
-                        );
+                        var row = new Dictionary<string, string>();
+                       
+                        for (int i = 0; i < reader.FieldCount; i++)
+                        {
+                            string columnName = reader.GetName(i);
+                            if (columnName.Equals("HireDate"))
+                            {
+                                row[columnName] = reader.IsDBNull(i)
+                                    ? "N/A"
+                                    : ((DateTime)reader.GetValue(i)).ToString("yyyy-MM-dd");
+                            }
+                            else
+                            {
+                                row[columnName] = reader.GetValue(i).ToString() ?? string.Empty;
+                            }
+                        }
+                        data.Add(row);
                     }
+                    var table = CreateTable(data, "All Staff");
+                    AnsiConsole.Write(table);
+                    Footer();
                 }
             }
         }
-        Console.ForegroundColor = ConsoleColor.DarkRed;
-        AnsiConsole.Write(new Rule("\n\tAll staff: ").Centered());
-        Console.ResetColor();
-        AnsiConsole.Write(table);
-        Console.ForegroundColor = ConsoleColor.DarkRed;
-        AnsiConsole.Write(new Rule("\n\tPress any key to return ").Centered());
-        Console.ResetColor();
-        Console.ReadLine();
-        Menus.DisplayMainMenu();
-        
     }
 
     public static void GetTeachers()
     {
         
-        var table = new Table()
-            .Centered()
-            .Border(TableBorder.Rounded)
-            .AddColumn("[blue]First Name[/]")
-            .AddColumn("[blue]Last Name[/]")
-            .AddColumn("[blue]Role[/]")
-            .AddColumn("[blue]Subject[/]")
-            .AddColumn("[blue]Hire Date[/]");
-
         using (SqlConnection conn = new SqlConnection(ConnectionString))
         {
             conn.Open();
@@ -80,77 +63,80 @@ public partial class DataService : DbContext
             {
                 using (SqlDataReader reader = command.ExecuteReader())
                 {
+                    var data = new List<Dictionary<string, string>>();
                     while (reader.Read())
                     {
-                        string hireDate = reader.IsDBNull(3) ? "N/A" : reader.GetDateTime(3).ToString("yyyy-MM-dd");
-                        table.AddRow(
-                            reader.GetString(0),
-                            reader.GetString(1),
-                            reader.GetString(2),
-                            reader.IsDBNull(4) ? "N/A" : reader.GetString(4),
-                            hireDate
-                        );
+                        var row = new Dictionary<string, string>();
+                       
+                        for (int i = 0; i < reader.FieldCount; i++)
+                        {
+                            string columnName = reader.GetName(i);
+                            if (columnName.Equals("HireDate"))
+                            {
+                                row[columnName] = reader.IsDBNull(i)
+                                    ? "N/A"
+                                    : ((DateTime)reader.GetValue(i)).ToString("yyyy-MM-dd");
+                            }
+                            else
+                            {
+                                row[columnName] = reader.GetValue(i).ToString() ?? string.Empty;
+                            }
+                        }
+                        data.Add(row);
                     }
-                    
+                    var table = CreateTable(data, "All Teachers");
+                    AnsiConsole.Write(table);
+                    Footer();
                 }
             }
         }
-        Console.ForegroundColor = ConsoleColor.DarkRed;
-        AnsiConsole.Write(new Rule("\n\tAll teachers: ").Centered());
-        Console.ResetColor();
-        AnsiConsole.Write(table);
-        Console.ForegroundColor = ConsoleColor.DarkRed;
-        AnsiConsole.Write(new Rule("\n\tPress any key to return ").Centered());
-        Console.ResetColor();
-        Console.ReadLine();
-        Menus.DisplayMainMenu();
     }
 
     public static void GetAllStudents(string name, string selection)
     {
-        var table = new Table()
-            .Centered()
-            .Border(TableBorder.Rounded)
-            .AddColumn("[blue]First Name[/]")
-            .AddColumn("[blue]Last Name[/]")
-            .AddColumn("[blue]EnrollmentDate[/]");
-        
         string sortBy = name.Equals("FirstName", StringComparison.OrdinalIgnoreCase) ? "firstname" : "lastname";
         bool ascending = selection.Equals("Ascending", StringComparison.OrdinalIgnoreCase);
 
         using (var context = new SchoolDbContext())
         {
+            var data = new List<Dictionary<string, string>>();
             var students = ascending
                 ? context.Students.OrderBy(s => sortBy == "firstname" ? s.FirstName : s.LastName)
                 : context.Students.OrderByDescending(s => sortBy == "firstname" ? s.FirstName : s.LastName);
 
             foreach (var student in students)
             {
-                string? enrollmentDate = student.EnrollmentDate.ToString();
-                if (enrollmentDate != null)
-                    table.AddRow(
-                        student.FirstName,
-                        student.LastName,
-                        enrollmentDate);
+                var row = new Dictionary<string, string>();
+                var properties = student.GetType().GetProperties();
+
+                foreach (var property in properties)
+                {
+                    string propertyName = property.Name;
+                    var propertyValue = property.GetValue(student);
+                    if (propertyValue is DateTime dateValue)
+                    {
+                        row[propertyName] = dateValue.ToString("yyyy-MM-dd");
+                    }
+                    else
+                    {
+                        row[propertyName] = propertyValue?.ToString() ?? string.Empty;
+                    }
+                }
+                data.Add(row);
             }
+            var table = CreateTable(data, "All Students");
+            AnsiConsole.Write(table);
+            Footer();
         }
-        Console.ForegroundColor = ConsoleColor.DarkRed;
-        AnsiConsole.Write(new Rule("\n\tAll Students: ").Centered());
-        Console.ResetColor();
-        AnsiConsole.Write(table);
-        Console.ForegroundColor = ConsoleColor.DarkRed;
-        AnsiConsole.Write(new Rule("\n\tPress any key to return ").Centered());
-        Console.ResetColor();
-        Console.ReadLine();
-        Menus.DisplayMainMenu();
     }
 
     public static void GetStudentsByCourse(int courseId, string name, string selection)
     {
+        
         using (var context = new SchoolDbContext())
         {
             var course = context.Courses.FirstOrDefault(c => c.CourseId == courseId);
-            
+            var data = new List<Dictionary<string, string>>();
             var query = context.Enrollments
                 .Where(e => e.CourseIdFk == courseId)
                 .Join(context.Students,
@@ -160,51 +146,29 @@ public partial class DataService : DbContext
                 .AsQueryable();
             
             query = name.Equals("First Name", StringComparison.OrdinalIgnoreCase)
-                ? (selection.Equals("Ascending", StringComparison.OrdinalIgnoreCase)
+                ? selection.Equals("Ascending", StringComparison.OrdinalIgnoreCase)
                     ? query.OrderBy(x => x.Student.FirstName)
-                    : query.OrderByDescending(x => x.Student.FirstName))
-                : (selection.Equals("Ascending", StringComparison.OrdinalIgnoreCase)
+                    : query.OrderByDescending(x => x.Student.FirstName)
+                : selection.Equals("Ascending", StringComparison.OrdinalIgnoreCase)
                     ? query.OrderBy(x => x.Student.LastName)
-                    : query.OrderByDescending(x => x.Student.LastName));
+                    : query.OrderByDescending(x => x.Student.LastName);
             
             var students = query.ToList();
-
-            Console.ForegroundColor = ConsoleColor.DarkGreen;
-            Console.WriteLine($"\n\tStudents in Course: {course?.CourseName}");
-            Console.ResetColor();
-            
-            int lineLenght = Math.Max(65, (course?.CourseName?.Length ?? 0) + 17);
-            string lines = new string('-', lineLenght);
-            
-            Console.WriteLine(lines);
-            Console.ForegroundColor = ConsoleColor.DarkRed;
-            Console.WriteLine("{0,-17} | {1,-20} | {2,-25} ", 
-                "Course", "First Name", "Last Name");
-            Console.ResetColor();
-            Console.WriteLine(lines);
-
             foreach (var item in students)
             {
+                var row = new Dictionary<string, string>();
                 
-                Console.WriteLine(
-                    "{0,-17} | {1,-20} | {2,-15}",
-                    course?.CourseName ?? "N/A",
-                    item.Student.FirstName,
-                    item.Student.LastName
-                );
+                    table.AddRow(
+                        course?.CourseName ?? "N/A",
+                        item.Student.FirstName,
+                        item.Student.LastName);
             }
-
-            if (!students.Any())
+            if (students.Count == 0)
             {
                 Console.WriteLine("No students found in this course.");
             }
-
-            Console.WriteLine("\n\tPress Enter to return to Main Menu");
-            Console.ReadLine();
-            Menus.DisplayMainMenu();
-           
+            
         }
-
         
     }
 
@@ -231,21 +195,23 @@ public partial class DataService : DbContext
             {
                 using (SqlDataReader reader = command.ExecuteReader())
                 {
-
-                    Console.WriteLine("Courses");
-                    Console.WriteLine(Lines);
-
-
+                    var data = new List<Dictionary<string, string>>();
+                    
                     while (reader.Read())
                     {
-
-                        Console.WriteLine(
-                            $"Course Name: {reader["CourseName"],-25} | Average Grade: {reader["AverageGrade"],-10} | " +
-                            $"Min Grade: {reader["MinGrade"],-5} | Max Grade: {reader["MaxGrade"]}");
+                        var row = new Dictionary<string, string>();
+                        for (int i = 0; i < reader.FieldCount; i++)
+                        {
+                            row[reader.GetName(i)] = reader.GetValue(i).ToString() ?? string.Empty;
+                        }
+                        data.Add(row);
 
                     }
-
-                    Console.WriteLine("\n\tPress Enter to return to Main Menu");
+                    var table = CreateTable(data, "All Courses");
+                    AnsiConsole.Write(table);
+                    Console.ForegroundColor = ConsoleColor.DarkRed;
+                    AnsiConsole.Write(new Rule("\n\tPress any key to return ").Centered());
+                    Console.ResetColor();
                     Console.ReadLine();
                     Menus.DisplayMainMenu();
                 }
@@ -324,7 +290,7 @@ public partial class DataService : DbContext
              }
         }
        
-        string? subject = CheckInput("Enter Staff Subject : (Optional)");
+        string subject = CheckInput("Enter Staff Subject : (Optional)");
         subject = string.IsNullOrWhiteSpace(subject) ? "" : subject;
         
         string sqlQuery =
@@ -463,5 +429,57 @@ public partial class DataService : DbContext
 
     [GeneratedRegex(@"^[a-öA-Ö\s]+$")]
     private static partial Regex MyRegex();
+
+    private static Table CreateTable<T>(IEnumerable<T> items, string? title = null)
+    {
+        if (items == null || !items.Any())
+        {
+            throw new ArgumentException("The rows cannot be null or empty.", nameof(items));
+        }
+        
+        Console.ForegroundColor = ConsoleColor.DarkRed;
+        AnsiConsole.Write(new Rule($"\n\t{title}: ").Centered());
+        Console.ResetColor();
+        
+        var table = new Table()
+            .Centered()
+            .Border(TableBorder.Rounded)
+            .BorderColor(Color.DarkRed);
+        
+            // Get the keys from the first dictionary (assuming all dictionaries have the same keys)
+            var firstRow = items.First() as Dictionary<string, string>;
+            if (firstRow == null)
+            {
+                throw new InvalidOperationException("Failed to read dictionary keys.");
+            }
+
+            // Add columns using dictionary keys
+            foreach (var key in firstRow.Keys)
+            {
+                table.AddColumn(new TableColumn($"[blue]{key}[/]").LeftAligned());
+            }
+
+            // Add rows using dictionary values
+            foreach (var item in items)
+            {
+                var row = (item as Dictionary<string, string>)!.Values.ToArray();
+                table.AddRow(row);
+            }
+       
+
+        return table; 
+        
+        
+    }
+
+    public static void Footer()
+    {
+        Console.ForegroundColor = ConsoleColor.DarkRed;
+        AnsiConsole.Write(new Rule("\n\tPress any key to return ").Centered());
+        Console.ResetColor();
+        Console.ReadLine();
+        Menus.DisplayMainMenu();
+    }
+   
     
 }
