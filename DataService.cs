@@ -1,3 +1,4 @@
+using System.Data;
 using System.Text.RegularExpressions;
 using Labb3_Anropa_databasen.Data;
 using Microsoft.Data.SqlClient;
@@ -9,9 +10,7 @@ namespace Labb3_Anropa_databasen;
 public partial class DataService : DbContext
 {
     private const string ConnectionString = @"Server=(localdb)\MSSQLLocalDB;Database=SchoolDB;Trusted_Connection=True;";
-    private static readonly string Lines = new ('-', 60);
-
-
+    
     public static void GetAllStaff()
     {
         using (var conn = new SqlConnection(ConnectionString))
@@ -41,9 +40,9 @@ public partial class DataService : DbContext
                         data.Add(row);
                     }
 
-                    var table = CreateTable(data, "All Staff");
+                    var table = Ui.CreateTable(data, "All Staff");
                     AnsiConsole.Write(table);
-                    Footer();
+                    Ui.Footer();
                 }
             }
         }
@@ -79,9 +78,9 @@ public partial class DataService : DbContext
                         data.Add(row);
                     }
 
-                    var table = CreateTable(data, "All Teachers");
+                    var table = Ui.CreateTable(data, "All Teachers");
                     AnsiConsole.Write(table);
-                    Footer();
+                    Ui.Footer();
                 }
             }
         }
@@ -109,17 +108,22 @@ public partial class DataService : DbContext
                     var propertyName = property.Name;
                     var propertyValue = property.GetValue(student);
                     if (propertyValue is DateTime dateValue)
+                    {
                         row[propertyName] = dateValue.ToString("yyyy-MM-dd");
+                    }
                     else
+                    {
                         row[propertyName] = propertyValue?.ToString() ?? string.Empty;
+                    }
+                        
                 }
 
                 data.Add(row);
             }
 
-            var table = CreateTable(data, "All Students");
+            var table = Ui.CreateTable(data, "All Students");
             AnsiConsole.Write(table);
-            Footer();
+            Ui.Footer();
         }
     }
 
@@ -127,7 +131,9 @@ public partial class DataService : DbContext
     {
         using (var context = new SchoolDbContext())
         {
+            
             var course = context.Courses.FirstOrDefault(c => c.CourseId == courseId);
+            
             var query = context.Enrollments
                 .Where(e => e.CourseIdFk == courseId)
                 .Join(context.Students,
@@ -142,31 +148,46 @@ public partial class DataService : DbContext
                         course!.CourseName
                     });
 
-            if (name.Equals("First Name", StringComparison.OrdinalIgnoreCase))
-                query = selection.Equals("Ascending", StringComparison.OrdinalIgnoreCase)
+            if (name.Equals("First Name"))
+                query = selection.Equals("Ascending")
                     ? query.OrderBy(x => x.FirstName)
                     : query.OrderByDescending(x => x.FirstName);
             else
-                query = selection.Equals("Ascending", StringComparison.OrdinalIgnoreCase)
+                query = selection.Equals("Ascending")
                     ? query.OrderBy(x => x.LastName)
                     : query.OrderByDescending(x => x.LastName);
 
             var students = query.ToList();
-            if (students.Count == 0) Console.WriteLine("No students found in this course.");
+            if (students.Count == 0)
+            {
+                Console.WriteLine($"\n\tNo student enrolled in {course!.CourseName}.");
+                Console.WriteLine("\n\tDo you want to try another course? y/n");
+                if (Console.ReadKey().KeyChar.ToString().ToLower() == "y")
+                {
+                    Console.Clear();
+                    Menus.StudentsByCourse();
+                }
+                else
+                {
+                    Menus.DisplayMainMenu();
+                }
+
+                return;
+            }
+            
             var data = students.Select(student => new Dictionary<string, string>
             {
                 { "CourseName", course!.CourseName },
                 { "FirstName", student.FirstName },
                 { "LastName", student.LastName },
-                {
-                    "EnrollmentDate",
+                { "EnrollmentDate",
                     student.EnrollmentDate.HasValue ? student.EnrollmentDate.Value.ToString("yyyy-MM-dd") : "N/A"
                 }
             }).ToList();
 
-            var table = CreateTable(data, "All Students by Course");
+            var table = Ui.CreateTable(data, "All Students by Course");
             AnsiConsole.Write(table);
-            Footer();
+            Ui.Footer();
         }
     }
 
@@ -178,38 +199,38 @@ public partial class DataService : DbContext
             var sqlQuery = @"
             SELECT 
                 Courses.CourseName, 
-                 CEILING(AVG(CAST(Grades.NumericGrade AS FLOAT)) * 10) / 10.0 AS AverageGrade, 
-                MIN(Grades.NumericGrade) AS MinGrade, 
-                MAX(Grades.NumericGrade) AS MaxGrade
+                  COALESCE(CEILING(AVG(CAST(Grades.NumericGrade AS FLOAT)) * 10) / 10.0, 0) AS AverageGrade, 
+            COALESCE(MIN(Grades.NumericGrade), 0) AS MinGrade, 
+            COALESCE(MAX(Grades.NumericGrade), 0) AS MaxGrade
             FROM 
-                Grades
-            JOIN 
-                Enrollments ON Grades.EnrollmentID_FK = Enrollments.EnrollmentID
-            JOIN 
-                Courses ON Enrollments.CourseID_FK = Courses.CourseID
+                Courses
+            LEFT JOIN 
+                Enrollments ON Courses.CourseID = Enrollments.CourseID_FK
+            LEFT JOIN 
+                Grades ON Enrollments.EnrollmentID = Grades.EnrollmentID_FK
             GROUP BY 
                 Courses.CourseName;";
             using (var command = new SqlCommand(sqlQuery, conn))
             {
                 using (var reader = command.ExecuteReader())
                 {
-                    var data = new List<Dictionary<string, string>>();
+                    var data = new List<Dictionary<string, string?>>();
 
                     while (reader.Read())
                     {
-                        var row = new Dictionary<string, string>();
+                        var row = new Dictionary<string, string?>();
                         for (var i = 0; i < reader.FieldCount; i++)
-                            row[reader.GetName(i)] = reader.GetValue(i).ToString() ?? string.Empty;
+                        {
+                            
+                            var value = reader.GetValue(i);
+                            row[reader.GetName(i)] = value == DBNull.Value ? "N/A" : value.ToString();
+                        }
                         data.Add(row);
                     }
 
-                    var table = CreateTable(data, "All Courses");
+                    var table = Ui.CreateTable(data, "All Courses");
                     AnsiConsole.Write(table);
-                    Console.ForegroundColor = ConsoleColor.DarkRed;
-                    AnsiConsole.Write(new Rule("\n\tPress any key to return ").Centered());
-                    Console.ResetColor();
-                    Console.ReadLine();
-                    Menus.DisplayMainMenu();
+                    Ui.Footer();
                 }
             }
         }
@@ -245,9 +266,7 @@ public partial class DataService : DbContext
                 var rowsAffected = command.ExecuteNonQuery();
                 if (rowsAffected > 0) Console.WriteLine("Student Added");
 
-                Console.WriteLine("\n\tPress Enter to return to Main Menu");
-                Console.ReadLine();
-                Menus.DisplayMainMenu();
+                Ui.Footer();
             }
         }
     }
@@ -267,7 +286,7 @@ public partial class DataService : DbContext
         if (string.IsNullOrWhiteSpace(hireDateInput))
         {
             hireDate = DateTime.Now;
-            Console.WriteLine("Today's date used.");
+            Console.Write("Today's date used.");
         }
         else
         {
@@ -293,12 +312,31 @@ public partial class DataService : DbContext
 
 
                 var rowsAffected = command.ExecuteNonQuery();
-                if (rowsAffected > 0) Console.WriteLine("Staff Added");
-
-                Console.WriteLine("\n\tPress Enter to return to Main Menu");
-                Console.ReadLine();
-                Menus.DisplayMainMenu();
+                if (rowsAffected > 0) Ui.Animation("Adding Staff");
+                Console.WriteLine("Staff Added");
+                
             }
+
+            if (!string.IsNullOrWhiteSpace(subject))
+            {
+                var checkSubjectQuery = "SELECT COUNT(*) FROM Courses WHERE CourseName = @Subject";
+                using (var checkCommand = new SqlCommand(checkSubjectQuery, conn))
+                {
+                    checkCommand.Parameters.AddWithValue("@Subject", subject);
+                    var exist =(int)checkCommand.ExecuteScalar() > 0;
+
+                    if (!exist)
+                    {
+                        var addCourseQuery = "INSERT INTO Courses (CourseName) VALUES (@Subject)";
+                        using (var addCourseCommand = new SqlCommand(addCourseQuery, conn))
+                        {
+                            addCourseCommand.Parameters.AddWithValue("@Subject", subject);
+                            addCourseCommand.ExecuteNonQuery();
+                        }
+                    }
+                }
+            }
+            Ui.Footer();
         }
     }
 
@@ -320,23 +358,23 @@ public partial class DataService : DbContext
 
             using (var command = new SqlCommand(sqlQuery, conn))
             {
+               
                 using (var reader = command.ExecuteReader())
                 {
-                    Console.WriteLine("Grades set the last month");
-                    Console.WriteLine(Lines);
-                    Console.WriteLine("{0,-30} | {1,-20} | {2,-10} | {3,-10}",
-                        "Student", "Course", "Grade", "Date");
+                    var data = new List<Dictionary<string, string>>();
 
                     while (reader.Read())
-                        Console.WriteLine("{0,-30} | {1,-20} | {2,-10} | {3:yyyy-MM-dd}",
-                            reader["StudentFullName"],
-                            reader["CourseName"],
-                            reader["NumericGrade"],
-                            reader["GradeSetDate"]);
+                    {
+                        var row = new Dictionary<string, string>();
+                        for (var i = 0; i < reader.FieldCount; i++)
+                            row[reader.GetName(i)] = reader.GetValue(i).ToString() ?? string.Empty;
+                        data.Add(row);
+                    }
 
-                    Console.WriteLine("\n\tPress Enter to return to Main Menu");
-                    Console.ReadLine();
-                    Menus.DisplayMainMenu();
+                    var table = Ui.CreateTable(data, "New Grades");
+                    AnsiConsole.Write(table);
+                    Ui.Footer();
+                    
                 }
             }
         }
@@ -357,26 +395,26 @@ public partial class DataService : DbContext
             JOIN Courses c ON e.CourseID_FK = c.CourseID
             ORDER BY StudentFullName DESC";
 
+           
             using (var command = new SqlCommand(sqlQuery, conn))
             {
+               
                 using (var reader = command.ExecuteReader())
                 {
-                    Console.WriteLine("All Grades");
-                    Console.WriteLine(Lines);
-                    Console.WriteLine("{0,-30} | {1,-20} | {2,-10} | {3,-10}",
-                        "Student", "Course", "Grade", "Date");
-                    Console.WriteLine(Lines);
-                    while (reader.Read())
-                        Console.WriteLine("{0,-30} | {1,-20} | {2,-10} | {3:yyyy-MM-dd}",
-                            reader["StudentFullName"],
-                            reader["CourseName"],
-                            reader["NumericGrade"],
-                            reader["GradeSetDate"]);
+                    var data = new List<Dictionary<string, string>>();
 
-                    Console.WriteLine(Lines);
-                    Console.WriteLine("\n\tPress Enter to return to Main Menu");
-                    Console.ReadLine();
-                    Menus.DisplayMainMenu();
+                    while (reader.Read())
+                    {
+                        var row = new Dictionary<string, string>();
+                        for (var i = 0; i < reader.FieldCount; i++)
+                            row[reader.GetName(i)] = reader.GetValue(i).ToString() ?? string.Empty;
+                        data.Add(row);
+                    }
+
+                    var table = Ui.CreateTable(data, "All Grades");
+                    AnsiConsole.Write(table);
+                    Ui.Footer();
+                    
                 }
             }
         }
@@ -403,46 +441,9 @@ public partial class DataService : DbContext
     [GeneratedRegex(@"^[a-öA-Ö\s]+$")]
     private static partial Regex MyRegex();
 
-    private static Table CreateTable<T>(IEnumerable<T> items, string? title = null)
-    {
-        if (items == null || !items.Any())
-            throw new ArgumentException("The rows cannot be null or empty.", nameof(items));
-
-        Console.ForegroundColor = ConsoleColor.DarkRed;
-        AnsiConsole.Write(new Rule($"\n\t{title}: ").Centered());
-        Console.ResetColor();
-
-        var table = new Table()
-            .Centered()
-            .Border(TableBorder.Rounded)
-            .BorderColor(Color.DarkRed);
-
-        // Get the keys from the first dictionary (assuming all dictionaries have the same keys)
-        var firstRow = items.First() as Dictionary<string, string>;
-        if (firstRow == null) throw new InvalidOperationException("Failed to read dictionary keys.");
-
-        // Add columns using dictionary keys
-        foreach (var key in firstRow.Keys) table.AddColumn(new TableColumn($"[blue]{key}[/]").LeftAligned());
-
-        // Add rows using dictionary values
-        foreach (var item in items)
-        {
-            var row = (item as Dictionary<string, string>)!.Values.ToArray();
-            table.AddRow(row);
-        }
 
 
-        return table;
-    }
-
-    public static void Footer()
-    {
-        Console.ForegroundColor = ConsoleColor.DarkRed;
-        AnsiConsole.Write(new Rule("\n\tPress any key to return ").Centered());
-        Console.ResetColor();
-        Console.ReadLine();
-        Menus.DisplayMainMenu();
-    }
+    
    
     
 }
