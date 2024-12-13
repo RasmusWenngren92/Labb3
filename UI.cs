@@ -1,5 +1,5 @@
+using System.Data.Common;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Diagnostics.Internal;
 using Spectre.Console;
 
 namespace Labb3_Anropa_databasen;
@@ -15,7 +15,7 @@ public class Ui : DbContext
 \____/ \___|_| |_|\___/ \___/|_| |___/ \____/ ";
 
 
-    internal static Table CreateTable<T>(IEnumerable<T> items, string? title = null)
+    internal static Table CreateTable<T>(IEnumerable<T>? items, string? title = null)
     {
         if (items == null || !items.Any())
         {
@@ -77,5 +77,61 @@ public class Ui : DbContext
             Console.WriteLine(line.PadLeft(line.Length + padding));
         }
     }
-    
+
+    public static List<Dictionary<string, string?>> DataFormater(DbDataReader reader, string? dateColumnName = null)
+    {
+        var data = new List<Dictionary<string, string?>>();
+        while (reader.Read())
+        {
+            var row = new Dictionary<string, string?>();
+            for (int i = 0; i < reader.FieldCount; i++)
+            {
+                var columnName = reader.GetName(i);
+                if (!string.IsNullOrEmpty(dateColumnName) && columnName.Equals(dateColumnName))
+                {
+                    row[columnName] = reader.IsDBNull(i) ? null : ((DateTime)reader.GetValue(i)).ToString("yyyy-MM-dd");
+                }
+                else
+                {
+                    row[columnName] = reader.IsDBNull(i) ? string.Empty : reader.GetValue(i).ToString();
+                }
+            }
+            data.Add(row);
+        }
+
+        return data;
+    }
+    public static List<Dictionary<string, string>> ExtractProperties<T>(IEnumerable<T> items, List<string> propertiesToDisplay)
+    {
+        var data = new List<Dictionary<string, string>>();
+
+        foreach (var item in items)
+        {
+            var row = new Dictionary<string, string>();
+
+            foreach (var propertyName in propertiesToDisplay)
+            {
+                var property = item?.GetType().GetProperty(propertyName);
+                if (property != null)
+                {
+                    var propertyValue = property.GetValue(item);
+
+                    // Format DateTime values
+                    if (propertyValue is DateTime dateValue)
+                    {
+                        row[propertyName] = dateValue.ToString("yyyy-MM-dd");
+                    }
+                    else
+                    {
+                        row[propertyName] = propertyValue?.ToString() ?? string.Empty;
+                    }
+                }
+            }
+
+            data.Add(row);
+        }
+
+        return data;
+    }
+
 }

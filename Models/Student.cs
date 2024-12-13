@@ -18,6 +18,7 @@ public partial class Student
     public DateOnly BirthDate { get; set; }
 
     public DateOnly? GraduationDate { get; set; }
-
+    
+    
     public virtual ICollection<Enrollment> Enrollments { get; set; } = new List<Enrollment>();
 }

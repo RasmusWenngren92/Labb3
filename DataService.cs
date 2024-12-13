@@ -1,6 +1,7 @@
-using System.Data;
+
 using System.Text.RegularExpressions;
 using Labb3_Anropa_databasen.Data;
+
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Spectre.Console;
@@ -9,6 +10,7 @@ namespace Labb3_Anropa_databasen;
 
 public partial class DataService : DbContext
 {
+    //Connection string for accessing the database
     private const string ConnectionString = @"Server=(localdb)\MSSQLLocalDB;Database=SchoolDB;Trusted_Connection=True;";
     
     public static void GetAllStaff()
@@ -16,30 +18,15 @@ public partial class DataService : DbContext
         using (var conn = new SqlConnection(ConnectionString))
         {
             conn.Open();
+            //SQL query to retrieve relevant information
             var sqlQuery = @"SELECT FirstName, LastName, Role, HireDate, Subject FROM Employees";
             using (var command = new SqlCommand(sqlQuery, conn))
             {
+              
+                //Executing query and processing results
                 using (var reader = command.ExecuteReader())
                 {
-                    var data = new List<Dictionary<string, string>>();
-                    while (reader.Read())
-                    {
-                        var row = new Dictionary<string, string>();
-
-                        for (var i = 0; i < reader.FieldCount; i++)
-                        {
-                            var columnName = reader.GetName(i);
-                            if (columnName.Equals("HireDate"))
-                                row[columnName] = reader.IsDBNull(i)
-                                    ? "N/A"
-                                    : ((DateTime)reader.GetValue(i)).ToString("yyyy-MM-dd");
-                            else
-                                row[columnName] = reader.GetValue(i).ToString() ?? string.Empty;
-                        }
-
-                        data.Add(row);
-                    }
-
+                    var data = Ui.DataFormater(reader, "HireDate");
                     var table = Ui.CreateTable(data, "All Staff");
                     AnsiConsole.Write(table);
                     Ui.Footer();
@@ -53,31 +40,15 @@ public partial class DataService : DbContext
         using (var conn = new SqlConnection(ConnectionString))
         {
             conn.Open();
+            //SQL query to retrieve relevant information
             var sqlQuery =
                 @"SELECT FirstName, LastName, Role, HireDate, Subject FROM Employees WHERE Role = 'Teacher'";
             using (var command = new SqlCommand(sqlQuery, conn))
             {
+                //Executing query and processing results
                 using (var reader = command.ExecuteReader())
                 {
-                    var data = new List<Dictionary<string, string>>();
-                    while (reader.Read())
-                    {
-                        var row = new Dictionary<string, string>();
-
-                        for (var i = 0; i < reader.FieldCount; i++)
-                        {
-                            var columnName = reader.GetName(i);
-                            if (columnName.Equals("HireDate"))
-                                row[columnName] = reader.IsDBNull(i)
-                                    ? "N/A"
-                                    : ((DateTime)reader.GetValue(i)).ToString("yyyy-MM-dd");
-                            else
-                                row[columnName] = reader.GetValue(i).ToString() ?? string.Empty;
-                        }
-
-                        data.Add(row);
-                    }
-
+                    var data = Ui.DataFormater(reader, "HireDate");
                     var table = Ui.CreateTable(data, "All Teachers");
                     AnsiConsole.Write(table);
                     Ui.Footer();
@@ -88,39 +59,29 @@ public partial class DataService : DbContext
 
     public static void GetAllStudents(string name, string selection)
     {
-        var sortBy = name.Equals("FirstName", StringComparison.OrdinalIgnoreCase) ? "firstname" : "lastname";
-        var ascending = selection.Equals("Ascending", StringComparison.OrdinalIgnoreCase);
-
+       
         using (var context = new SchoolDbContext())
         {
-            var data = new List<Dictionary<string, string>>();
-            var students = ascending
-                ? context.Students.OrderBy(s => sortBy == "firstname" ? s.FirstName : s.LastName)
-                : context.Students.OrderByDescending(s => sortBy == "firstname" ? s.FirstName : s.LastName);
-
-            foreach (var student in students)
+           
+            var query = context.Students.AsQueryable();
+            if (name.Equals("First Name", StringComparison.OrdinalIgnoreCase))
             {
-                var row = new Dictionary<string, string>();
-                var properties = student.GetType().GetProperties();
-
-                foreach (var property in properties)
-                {
-                    var propertyName = property.Name;
-                    var propertyValue = property.GetValue(student);
-                    if (propertyValue is DateTime dateValue)
-                    {
-                        row[propertyName] = dateValue.ToString("yyyy-MM-dd");
-                    }
-                    else
-                    {
-                        row[propertyName] = propertyValue?.ToString() ?? string.Empty;
-                    }
-                        
-                }
-
-                data.Add(row);
+                query = selection.Equals("Ascending", StringComparison.OrdinalIgnoreCase)
+                    ? query.OrderBy(x => x.FirstName)
+                    : query.OrderByDescending(x => x.FirstName);
             }
+            else
+            {
+                query = selection.Equals("Ascending", StringComparison.OrdinalIgnoreCase)
+                    ? query.OrderBy(x => x.LastName)
+                    : query.OrderByDescending(x => x.LastName);
+            }
+            var students = query.ToList();
+            var propertiesToDisplay = new List<string> { "FirstName", "LastName", "EnrollmentDate", "BirthDate", "GraduationDate" };
+           
+            var data = Ui.ExtractProperties(students, propertiesToDisplay);
 
+            //Creates and displays table with information
             var table = Ui.CreateTable(data, "All Students");
             AnsiConsole.Write(table);
             Ui.Footer();
@@ -131,7 +92,7 @@ public partial class DataService : DbContext
     {
         using (var context = new SchoolDbContext())
         {
-            
+            //Retrieve course information
             var course = context.Courses.FirstOrDefault(c => c.CourseId == courseId);
             
             var query = context.Enrollments
@@ -147,7 +108,7 @@ public partial class DataService : DbContext
                         student.EnrollmentDate,
                         course!.CourseName
                     });
-
+            //Sorting based on user input (FirstName or LastName)
             if (name.Equals("First Name"))
                 query = selection.Equals("Ascending")
                     ? query.OrderBy(x => x.FirstName)
@@ -177,10 +138,10 @@ public partial class DataService : DbContext
             
             var data = students.Select(student => new Dictionary<string, string>
             {
-                { "CourseName", course!.CourseName },
-                { "FirstName", student.FirstName },
-                { "LastName", student.LastName },
-                { "EnrollmentDate",
+                { "Course Name", course!.CourseName },
+                { "First Name", student.FirstName },
+                { "Last Name", student.LastName },
+                { "Enrollment Date",
                     student.EnrollmentDate.HasValue ? student.EnrollmentDate.Value.ToString("yyyy-MM-dd") : "N/A"
                 }
             }).ToList();
@@ -358,27 +319,17 @@ public partial class DataService : DbContext
 
             using (var command = new SqlCommand(sqlQuery, conn))
             {
-               
                 using (var reader = command.ExecuteReader())
                 {
-                    var data = new List<Dictionary<string, string>>();
-
-                    while (reader.Read())
-                    {
-                        var row = new Dictionary<string, string>();
-                        for (var i = 0; i < reader.FieldCount; i++)
-                            row[reader.GetName(i)] = reader.GetValue(i).ToString() ?? string.Empty;
-                        data.Add(row);
-                    }
-
+                    var data = Ui.DataFormater(reader, "GradeSetDate");
                     var table = Ui.CreateTable(data, "New Grades");
                     AnsiConsole.Write(table);
                     Ui.Footer();
-                    
                 }
             }
         }
     }
+   
 
     public static void GetAllGrades()
     {
@@ -401,20 +352,10 @@ public partial class DataService : DbContext
                
                 using (var reader = command.ExecuteReader())
                 {
-                    var data = new List<Dictionary<string, string>>();
-
-                    while (reader.Read())
-                    {
-                        var row = new Dictionary<string, string>();
-                        for (var i = 0; i < reader.FieldCount; i++)
-                            row[reader.GetName(i)] = reader.GetValue(i).ToString() ?? string.Empty;
-                        data.Add(row);
-                    }
-
-                    var table = Ui.CreateTable(data, "All Grades");
+                    var data = Ui.DataFormater(reader, "GradeSetDate");
+                    var table = Ui.CreateTable(data, "New Grades");
                     AnsiConsole.Write(table);
                     Ui.Footer();
-                    
                 }
             }
         }
@@ -440,10 +381,5 @@ public partial class DataService : DbContext
 
     [GeneratedRegex(@"^[a-öA-Ö\s]+$")]
     private static partial Regex MyRegex();
-
-
-
-    
-   
     
 }
