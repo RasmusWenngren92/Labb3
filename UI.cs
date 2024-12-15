@@ -69,7 +69,7 @@ public class Ui : DbContext
             .SpinnerStyle(Style.Parse("yellow bold")) // Set the spinner style to bold yellow
             .Start($"[blue]{title}...[/]", _ =>
             {
-                Thread.Sleep(2000); // Simulate a 3-second delay for checking the receiver
+                Thread.Sleep(2000); // Simulate a 2-second delay for checking the receiver
             });
     }
     public static void DisplayCenterdText(string text)

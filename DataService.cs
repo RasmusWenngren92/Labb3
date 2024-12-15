@@ -235,14 +235,14 @@ public partial class DataService : DbContext
                     
                     if (insertedStudentId != null)
                     {
-                        studentId = Convert.ToInt32(insertedStudentId); // Assign the student ID
+                        studentId = Convert.ToInt32(insertedStudentId); 
                         Console.WriteLine($"Student inserted with ID: {studentId}");
                     }
                     else
                     {
                         Console.WriteLine("Failed to insert student.");
-                        transaction.Rollback(); // Rollback the transaction if student insertion fails
-                        return; // Exit the method
+                        transaction.Rollback(); 
+                        return; 
                     }
                  }
 
