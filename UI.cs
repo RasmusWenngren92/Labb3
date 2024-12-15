@@ -1,6 +1,10 @@
+using System.Data;
 using System.Data.Common;
+using Labb3_Anropa_databasen.Models;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Spectre.Console;
+using Rule = Spectre.Console.Rule;
 
 namespace Labb3_Anropa_databasen;
 
@@ -132,6 +136,48 @@ public class Ui : DbContext
         }
 
         return data;
+    }
+
+    public static void CourseEnrollment(SqlConnection conn, int studentId, SqlTransaction transaction)
+    {
+        var courses = new Dictionary<string, int>();
+        using (var fetchCoursesCommand = new SqlCommand("SELECT CourseID, CourseName FROM Courses", conn, transaction))
+        using (var reader = fetchCoursesCommand.ExecuteReader())
+        {
+            while (reader.Read())
+            {
+                var courseName = reader["CourseName"].ToString();
+                var courseId = (int)reader["CourseID"];
+                if (courseName != null) courses.Add(courseName, courseId);
+            }
+        }
+
+        if (courses.Count > 0)
+        {
+            var selectedCourses = AnsiConsole.Prompt(
+                new MultiSelectionPrompt<string>()
+                    .Title("Select courses to enroll:")
+                    .AddChoices(courses.Keys)
+            );
+
+            foreach (var courseName in selectedCourses)
+            {
+                int courseId = courses[courseName];
+                var enrollQuery = "INSERT INTO Enrollments (StudentID_FK, CourseID_FK) VALUES (@StudentID_FK, @CourseID_FK)";
+                using (var enrollCommand = new SqlCommand(enrollQuery, conn, transaction))
+                {
+                    enrollCommand.Parameters.Add(new SqlParameter("@StudentID_FK", SqlDbType.Int) { Value = studentId });
+                    enrollCommand.Parameters.Add(new SqlParameter("@CourseID_FK", SqlDbType.Int) { Value = courseId });
+
+                    enrollCommand.ExecuteNonQuery();
+                    Console.WriteLine($"Successfully enrolled student with ID {studentId} into course {courseName}.");
+                }
+            }
+        }
+        else
+        {
+            Console.WriteLine("No courses available to enroll.");
+        }
     }
 
 }

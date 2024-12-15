@@ -197,12 +197,12 @@ public partial class DataService : DbContext
         }
     }
 
-    public static void AddStudent()
+    public static void AddStudent() 
     {
         var firstName = CheckInput("Enter Student First Name: ");
 
         var lastName = CheckInput("Enter Student Last Name: ");
-
+        
         Console.WriteLine("Enter Gender(Optional): ");
         var gender = Console.ReadLine();
 
@@ -210,25 +210,48 @@ public partial class DataService : DbContext
         DateTime birthDate;
         while (!DateTime.TryParse(Console.ReadLine(), out birthDate))
             Console.WriteLine("Invalid date format. Please enter again (yyyy-mm-dd)");
-
-        var sqlQuery =
-            @"INSERT INTO Students (FirstName, LastName, Gender, BirthDate, EnrollmentDate) VALUES (@FirstName, @LastName, @Gender, @BirthDate, @EnrollmentDate)";
+        
+        var enrollCourse = CheckInput("Do you want to enroll to one or more courses? (y/n)").Trim().ToLower();
         using (var conn = new SqlConnection(ConnectionString))
         {
             conn.Open();
-            using (var command = new SqlCommand(sqlQuery, conn))
+            using (var transaction = conn.BeginTransaction())
             {
-                command.Parameters.AddWithValue("@FirstName", firstName);
-                command.Parameters.AddWithValue("@LastName", lastName);
-                command.Parameters.AddWithValue("@Gender", gender);
-                command.Parameters.AddWithValue("@BirthDate", birthDate);
-                command.Parameters.AddWithValue("@EnrollmentDate", DateTime.Now);
+                 var sqlQuery =
+                            @"INSERT INTO Students (FirstName, LastName, Gender, BirthDate, EnrollmentDate) 
+                                    VALUES (@FirstName, @LastName, @Gender, @BirthDate, @EnrollmentDate);
+                                    SELECT SCOPE_IDENTITY();";
+                 var studentId = 0;
+                 using (var command = new SqlCommand(sqlQuery, conn, transaction))
+                 {
+                     command.Parameters.AddWithValue("@FirstName", firstName);
+                     command.Parameters.AddWithValue("@LastName", lastName);
+                     command.Parameters.AddWithValue("@Gender", gender ?? (object)DBNull.Value);
+                     command.Parameters.AddWithValue("@BirthDate", birthDate);
+                     command.Parameters.AddWithValue("@EnrollmentDate", DateTime.Now);
 
-                var rowsAffected = command.ExecuteNonQuery();
-                if (rowsAffected > 0) Console.WriteLine("Student Added");
 
-                Ui.Footer();
+                     var insertedStudentId = command.ExecuteScalar();
+                    
+                    if (insertedStudentId != null)
+                    {
+                        studentId = Convert.ToInt32(insertedStudentId); // Assign the student ID
+                        Console.WriteLine($"Student inserted with ID: {studentId}");
+                    }
+                    else
+                    {
+                        Console.WriteLine("Failed to insert student.");
+                        transaction.Rollback(); // Rollback the transaction if student insertion fails
+                        return; // Exit the method
+                    }
+                 }
+
+                 if (enrollCourse == "y" && studentId > 0) Ui.CourseEnrollment(conn, studentId, transaction);
+                 transaction.Commit();
+                 Ui.Footer();
             }
+            
+           
         }
     }
 
@@ -242,6 +265,7 @@ public partial class DataService : DbContext
 
         Console.WriteLine("Enter Hire Date (yyyy-mm-dd): " +
                           "(If you want to use today's date press enter.)");
+        
         DateTime hireDate;
         var hireDateInput = Console.ReadLine();
         if (string.IsNullOrWhiteSpace(hireDateInput))
