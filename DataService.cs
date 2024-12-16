@@ -18,20 +18,29 @@ public partial class DataService : DbContext
         using (var conn = new SqlConnection(ConnectionString))
         {
             conn.Open();
-            //SQL query to retrieve relevant information
-            var sqlQuery = @"SELECT FirstName, LastName, Role, HireDate, Subject FROM Employees";
-            using (var command = new SqlCommand(sqlQuery, conn))
+            try
             {
-              
-                //Executing query and processing results
-                using (var reader = command.ExecuteReader())
+                //SQL query to retrieve relevant information
+                var sqlQuery = @"SELECT FirstName, LastName, Role, HireDate, Subject FROM Employees ORDER BY HireDate Desc";
+                using (var command = new SqlCommand(sqlQuery, conn))
                 {
-                    var data = Ui.DataFormater(reader, "HireDate");
-                    var table = Ui.CreateTable(data, "All Staff");
-                    AnsiConsole.Write(table);
-                    Ui.Footer();
+                    //Executing query and processing results
+                    using (var reader = command.ExecuteReader())
+                    {
+                        var data = Ui.DataFormater(reader, "HireDate");
+                        var table = Ui.CreateTable(data, "All Staff");
+                        AnsiConsole.Write(table);
+                        Ui.Footer();
+                    }
                 }
             }
+            catch (Exception e)
+            {
+                Console.WriteLine("Am error occured while retrieving staff: " + e.Message);
+                Console.WriteLine("Error details: " + e.StackTrace);
+                throw;
+            }
+           
         }
     }
 
@@ -40,116 +49,147 @@ public partial class DataService : DbContext
         using (var conn = new SqlConnection(ConnectionString))
         {
             conn.Open();
-            //SQL query to retrieve relevant information
-            var sqlQuery =
-                @"SELECT FirstName, LastName, Role, HireDate, Subject FROM Employees WHERE Role = 'Teacher'";
-            using (var command = new SqlCommand(sqlQuery, conn))
+            try
             {
-                //Executing query and processing results
-                using (var reader = command.ExecuteReader())
+                //SQL query to retrieve relevant information
+                var sqlQuery =
+                    @"SELECT FirstName, LastName, Role, HireDate, Subject FROM Employees WHERE Role = 'Teacher' Order BY HireDate Desc";
+                using (var command = new SqlCommand(sqlQuery, conn))
                 {
-                    var data = Ui.DataFormater(reader, "HireDate");
-                    var table = Ui.CreateTable(data, "All Teachers");
-                    AnsiConsole.Write(table);
-                    Ui.Footer();
+                    //Executing query and processing results
+                    using (var reader = command.ExecuteReader())
+                    {
+                        var data = Ui.DataFormater(reader, "HireDate");
+                        var table = Ui.CreateTable(data, "All Teachers");
+                        AnsiConsole.Write(table);
+                        Ui.Footer();
+                    }
                 }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("An error occured while retrieving teachers: " + e.Message);
+                Console.WriteLine("Error details: " + e.StackTrace);
+                throw;
             }
         }
     }
 
     public static void GetAllStudents(string name, string selection)
     {
-       
-        using (var context = new SchoolDbContext())
+        try
         {
-           
-            var query = context.Students.AsQueryable();
-            if (name.Equals("First Name", StringComparison.OrdinalIgnoreCase))
+            using (var context = new SchoolDbContext())
             {
-                query = selection.Equals("Ascending", StringComparison.OrdinalIgnoreCase)
-                    ? query.OrderBy(x => x.FirstName)
-                    : query.OrderByDescending(x => x.FirstName);
-            }
-            else
-            {
-                query = selection.Equals("Ascending", StringComparison.OrdinalIgnoreCase)
-                    ? query.OrderBy(x => x.LastName)
-                    : query.OrderByDescending(x => x.LastName);
-            }
-            var students = query.ToList();
-            var propertiesToDisplay = new List<string> { "FirstName", "LastName", "EnrollmentDate", "BirthDate", "GraduationDate" };
-           
-            var data = Ui.ExtractProperties(students, propertiesToDisplay);
+                var query = context.Students.AsQueryable();
+                //Sorting depending on input from user
+                if (name.Equals("First Name", StringComparison.OrdinalIgnoreCase))
+                    query = selection.Equals("Ascending", StringComparison.OrdinalIgnoreCase)
+                        ? query.OrderBy(x => x.FirstName)
+                        : query.OrderByDescending(x => x.FirstName);
+                else
+                    query = selection.Equals("Ascending", StringComparison.OrdinalIgnoreCase)
+                        ? query.OrderBy(x => x.LastName)
+                        : query.OrderByDescending(x => x.LastName);
+                var students = query.ToList();
+                var propertiesToDisplay = new List<string>
+                    { "FirstName", "LastName", "EnrollmentDate", "BirthDate", "GraduationDate" };
 
-            //Creates and displays table with information
-            var table = Ui.CreateTable(data, "All Students");
-            AnsiConsole.Write(table);
-            Ui.Footer();
+                var data = Ui.ExtractProperties(students, propertiesToDisplay);
+
+                //Creates and displays table with information
+                var table = Ui.CreateTable(data, "All Students");
+                AnsiConsole.Write(table);
+                Ui.Footer();
+            }
         }
+        catch (Exception e)
+        {
+            Console.WriteLine("An error occurred while retrieving students: " + e.Message);
+            Console.WriteLine("Error details: " + e.StackTrace);
+            throw;
+        }
+        
     }
 
     public static void GetStudentsByCourse(int courseId, string name, string selection)
     {
-        using (var context = new SchoolDbContext())
+        try
         {
-            //Retrieve course information
-            var course = context.Courses.FirstOrDefault(c => c.CourseId == courseId);
-            
-            var query = context.Enrollments
-                .Where(e => e.CourseIdFk == courseId)
-                .Join(context.Students,
-                    enrollment => enrollment.StudentIdFk,
-                    student => student.StudentId,
-                    (enrollment, student) => new
-                    {
-                        student.StudentId,
-                        student.FirstName,
-                        student.LastName,
-                        student.EnrollmentDate,
-                        course!.CourseName
-                    });
-            //Sorting based on user input (FirstName or LastName)
-            if (name.Equals("First Name"))
-                query = selection.Equals("Ascending")
-                    ? query.OrderBy(x => x.FirstName)
-                    : query.OrderByDescending(x => x.FirstName);
-            else
-                query = selection.Equals("Ascending")
-                    ? query.OrderBy(x => x.LastName)
-                    : query.OrderByDescending(x => x.LastName);
-
-            var students = query.ToList();
-            if (students.Count == 0)
+            using (var context = new SchoolDbContext())
             {
-                Console.WriteLine($"\n\tNo student enrolled in {course!.CourseName}.");
-                Console.WriteLine("\n\tDo you want to try another course? y/n");
-                if (Console.ReadKey().KeyChar.ToString().ToLower() == "y")
-                {
-                    Console.Clear();
-                    Menus.StudentsByCourse();
-                }
+                //Retrieve course information
+                var course = context.Courses.FirstOrDefault(c => c.CourseId == courseId);
+
+                // Perform a query to join the Enrollments table with the Students table.
+                var query = context.Enrollments
+                    .Where(e => e.CourseIdFk == courseId)
+                    .Join(context.Students,
+                        enrollment => enrollment.StudentIdFk,
+                        student => student.StudentId,
+                        (enrollment, student) => new // Creates an anonymous object to return the necessary data
+                        {
+                            student.StudentId,
+                            student.FirstName,
+                            student.LastName,
+                            student.EnrollmentDate,
+                            course!.CourseName
+                        });
+                // Sorting the query based on the user input (First Name or Last Name, Ascending or Descending)
+                if (name.Equals("First Name"))
+                    query = selection.Equals("Ascending")
+                        ? query.OrderBy(x => x.FirstName)
+                        : query.OrderByDescending(x => x.FirstName);
                 else
+                    query = selection.Equals("Ascending")
+                        ? query.OrderBy(x => x.LastName)
+                        : query.OrderByDescending(x => x.LastName);
+
+                // If no students are found for the given course, displays a message and allow the user to try another course
+                var students = query.ToList();
+                while (students.Count == 0)
                 {
+                    Console.WriteLine($"\n\tNo student enrolled in {course!.CourseName}.");
+                    Console.WriteLine("\n\tDo you want to try another course? y/n");
+
+                    // Get user input (y/n) to decide if they want to retry or exit.
+                    var userInput = Console.ReadKey().KeyChar.ToString().ToLower();
+                    if (userInput == "y")
+                    {
+                        // Clear the console and re-prompt the user for a new course.
+                        Console.Clear();
+                        Menus.StudentsByCourse();
+                        return;
+                    }
+                    // If the user opts not to retry, exit to the main menu.
                     Menus.DisplayMainMenu();
+                    return;
                 }
 
-                return;
+                // Prepare the student data for display in a table format
+                var data = students.Select(student => new Dictionary<string, string>
+                {
+                    { "Course Name", course!.CourseName },
+                    { "First Name", student.FirstName },
+                    { "Last Name", student.LastName },
+                    {
+                        "Enrollment Date",
+                        student.EnrollmentDate.HasValue ? student.EnrollmentDate.Value.ToString("yyyy-MM-dd") : "N/A"
+                    }
+                }).ToList();
+
+                var table = Ui.CreateTable(data, "All Students by Course");
+                AnsiConsole.Write(table);
+                Ui.Footer();
             }
-            
-            var data = students.Select(student => new Dictionary<string, string>
-            {
-                { "Course Name", course!.CourseName },
-                { "First Name", student.FirstName },
-                { "Last Name", student.LastName },
-                { "Enrollment Date",
-                    student.EnrollmentDate.HasValue ? student.EnrollmentDate.Value.ToString("yyyy-MM-dd") : "N/A"
-                }
-            }).ToList();
-
-            var table = Ui.CreateTable(data, "All Students by Course");
-            AnsiConsole.Write(table);
-            Ui.Footer();
         }
+        catch (Exception e)
+        {
+            Console.WriteLine("An error occured while executing: " + e.Message);
+            Console.WriteLine("Error details: " + e.StackTrace);
+            throw;
+        }
+        
     }
 
     public static void GetAllCourses()
@@ -157,7 +197,11 @@ public partial class DataService : DbContext
         using (var conn = new SqlConnection(ConnectionString))
         {
             conn.Open();
-            var sqlQuery = @"
+            try
+            {
+                // SQL query to retrieve course data along with average grade, min grade, and max grade
+                // COALESCE is used to handle NULL values by replacing them with 0 for grades
+                var sqlQuery = @"
             SELECT 
                 Courses.CourseName, 
                   COALESCE(CEILING(AVG(CAST(Grades.NumericGrade AS FLOAT)) * 10) / 10.0, 0) AS AverageGrade, 
@@ -171,29 +215,37 @@ public partial class DataService : DbContext
                 Grades ON Enrollments.EnrollmentID = Grades.EnrollmentID_FK
             GROUP BY 
                 Courses.CourseName;";
-            using (var command = new SqlCommand(sqlQuery, conn))
-            {
-                using (var reader = command.ExecuteReader())
+                using (var command = new SqlCommand(sqlQuery, conn))
                 {
-                    var data = new List<Dictionary<string, string?>>();
-
-                    while (reader.Read())
+                    using (var reader = command.ExecuteReader())
                     {
-                        var row = new Dictionary<string, string?>();
-                        for (var i = 0; i < reader.FieldCount; i++)
-                        {
-                            
-                            var value = reader.GetValue(i);
-                            row[reader.GetName(i)] = value == DBNull.Value ? "N/A" : value.ToString();
-                        }
-                        data.Add(row);
-                    }
+                        var data = new List<Dictionary<string, string?>>();
 
-                    var table = Ui.CreateTable(data, "All Courses");
-                    AnsiConsole.Write(table);
-                    Ui.Footer();
+                        while (reader.Read())
+                        {
+                            var row = new Dictionary<string, string?>();
+                            for (var i = 0; i < reader.FieldCount; i++)
+                            {
+                                var value = reader.GetValue(i);
+                                row[reader.GetName(i)] = value == DBNull.Value ? "N/A" : value.ToString();
+                            }
+
+                            data.Add(row);
+                        }
+
+                        var table = Ui.CreateTable(data, "All Courses");
+                        AnsiConsole.Write(table);
+                        Ui.Footer();
+                    }
                 }
             }
+            catch (Exception e)
+            {
+                Console.WriteLine("An error occured while executing: " + e.Message);
+                Console.WriteLine("Error details: " + e.StackTrace);
+                throw;
+            }
+            
         }
     }
 
@@ -215,43 +267,52 @@ public partial class DataService : DbContext
         using (var conn = new SqlConnection(ConnectionString))
         {
             conn.Open();
-            using (var transaction = conn.BeginTransaction())
+            try
             {
-                 var sqlQuery =
-                            @"INSERT INTO Students (FirstName, LastName, Gender, BirthDate, EnrollmentDate) 
+                using (var transaction = conn.BeginTransaction())
+                {
+                    // Defines the SQL query to insert the new student into the database
+                    var sqlQuery =
+                        @"INSERT INTO Students (FirstName, LastName, Gender, BirthDate, EnrollmentDate) 
                                     VALUES (@FirstName, @LastName, @Gender, @BirthDate, @EnrollmentDate);
                                     SELECT SCOPE_IDENTITY();";
-                 var studentId = 0;
-                 using (var command = new SqlCommand(sqlQuery, conn, transaction))
-                 {
-                     command.Parameters.AddWithValue("@FirstName", firstName);
-                     command.Parameters.AddWithValue("@LastName", lastName);
-                     command.Parameters.AddWithValue("@Gender", gender ?? (object)DBNull.Value);
-                     command.Parameters.AddWithValue("@BirthDate", birthDate);
-                     command.Parameters.AddWithValue("@EnrollmentDate", DateTime.Now);
-
-
-                     var insertedStudentId = command.ExecuteScalar();
-                    
-                    if (insertedStudentId != null)
+                    var studentId = 0;
+                    using (var command = new SqlCommand(sqlQuery, conn, transaction))
                     {
-                        studentId = Convert.ToInt32(insertedStudentId); 
-                        Console.WriteLine($"Student inserted with ID: {studentId}");
-                    }
-                    else
-                    {
-                        Console.WriteLine("Failed to insert student.");
-                        transaction.Rollback(); 
-                        return; 
-                    }
-                 }
+                        // Adds parameters to the SQL command to prevent SQL injection
+                        command.Parameters.AddWithValue("@FirstName", firstName);
+                        command.Parameters.AddWithValue("@LastName", lastName);
+                        command.Parameters.AddWithValue("@Gender", gender ?? (object)DBNull.Value);
+                        command.Parameters.AddWithValue("@BirthDate", birthDate);
+                        command.Parameters.AddWithValue("@EnrollmentDate", DateTime.Now);
 
-                 if (enrollCourse == "y" && studentId > 0) Ui.CourseEnrollment(conn, studentId, transaction);
-                 transaction.Commit();
-                 Ui.Footer();
+                        var insertedStudentId = command.ExecuteScalar();
+
+                        if (insertedStudentId != null)
+                        {
+                            studentId = Convert.ToInt32(insertedStudentId);
+                            Console.WriteLine($"Student inserted with ID: {studentId}");
+                        }
+                        else
+                        {
+                            Console.WriteLine("Failed to insert student.");
+                            transaction.Rollback();
+                            return;
+                        }
+                    }
+
+                    // If the user chose to enroll the student in courses and the student ID is valid, proceeds to course enrollment
+                    if (enrollCourse == "y" && studentId > 0) Ui.CourseEnrollment(conn, studentId, transaction);
+                    transaction.Commit();
+                    Ui.Footer();
+                }
             }
-            
-           
+            catch (Exception e)
+            {
+                Console.WriteLine("An error occured while executing: " + e.Message);
+                Console.WriteLine("Error details: " + e.StackTrace);
+                throw;
+            }
         }
     }
 
@@ -265,7 +326,7 @@ public partial class DataService : DbContext
 
         Console.WriteLine("Enter Hire Date (yyyy-mm-dd): " +
                           "(If you want to use today's date press enter.)");
-        
+
         DateTime hireDate;
         var hireDateInput = Console.ReadLine();
         if (string.IsNullOrWhiteSpace(hireDateInput))
@@ -281,47 +342,94 @@ public partial class DataService : DbContext
 
         var subject = CheckInput("Enter Staff Subject : (Optional)");
         subject = string.IsNullOrWhiteSpace(subject) ? "" : subject;
-
-        var sqlQuery =
-            @"INSERT INTO Employees (FirstName, LastName, Role, HireDate, Subject) VALUES (@FirstName, @LastName, @Role, @HireDate, @Subject)";
+       
+        // Defines the SQL query to insert the new staff into the database
         using (var conn = new SqlConnection(ConnectionString))
         {
             conn.Open();
-            using (var command = new SqlCommand(sqlQuery, conn))
+            using (var transaction = conn.BeginTransaction())
             {
-                command.Parameters.AddWithValue("@FirstName", firstName);
-                command.Parameters.AddWithValue("@LastName", lastName);
-                command.Parameters.AddWithValue("@Role", role);
-                command.Parameters.AddWithValue("@HireDate", hireDate);
-                command.Parameters.AddWithValue("@Subject", subject);
-
-
-                var rowsAffected = command.ExecuteNonQuery();
-                if (rowsAffected > 0) Ui.Animation("Adding Staff");
-                Console.WriteLine("Staff Added");
-                
-            }
-
-            if (!string.IsNullOrWhiteSpace(subject))
-            {
-                var checkSubjectQuery = "SELECT COUNT(*) FROM Courses WHERE CourseName = @Subject";
-                using (var checkCommand = new SqlCommand(checkSubjectQuery, conn))
+                try
                 {
-                    checkCommand.Parameters.AddWithValue("@Subject", subject);
-                    var exist =(int)checkCommand.ExecuteScalar() > 0;
-
-                    if (!exist)
+                    var sqlQuery = @"
+                INSERT INTO Employees (FirstName, LastName, Role, HireDate, Subject)
+                VALUES (@FirstName, @LastName, @Role, @HireDate, @Subject);
+                SELECT SCOPE_IDENTITY();";
+                     var teacherId = 0;
+                    using (var command = new SqlCommand(sqlQuery, conn, transaction))
                     {
-                        var addCourseQuery = "INSERT INTO Courses (CourseName) VALUES (@Subject)";
-                        using (var addCourseCommand = new SqlCommand(addCourseQuery, conn))
+                        // Adds parameters to the SQL command to prevent SQL injection
+                        command.Parameters.AddWithValue("@FirstName", firstName);
+                        command.Parameters.AddWithValue("@LastName", lastName);
+                        command.Parameters.AddWithValue("@Role", role);
+                        command.Parameters.AddWithValue("@HireDate", hireDate);
+                        command.Parameters.AddWithValue("@Subject", subject ?? (object)DBNull.Value);
+
+                        var insertedTeacherId = command.ExecuteScalar();
+                        if (insertedTeacherId != null)
                         {
-                            addCourseCommand.Parameters.AddWithValue("@Subject", subject);
-                            addCourseCommand.ExecuteNonQuery();
+                            teacherId = Convert.ToInt32(insertedTeacherId);
+                            Console.WriteLine($"Teacher added with ID: {teacherId}");
+                        }
+                        else
+                        {
+                            throw new Exception("Failed to insert staff.");
+                        }
+                        
+                        Console.WriteLine("Staff Added");
+                    }
+
+                    // If the user chose to add a subject this query will execute it and insert it into Courses and linq it to the teacher
+                    if (!string.IsNullOrWhiteSpace(subject))
+                    {
+                        // Retrieve CourseID for the given subject
+                        var getCourseIdQuery = "SELECT CourseID FROM Courses WHERE CourseName = @Subject";
+                        var courseId = 0;
+
+                        using (var getCourseCommand = new SqlCommand(getCourseIdQuery, conn, transaction))
+                        {
+                            getCourseCommand.Parameters.AddWithValue("@Subject", subject);
+                            var result = getCourseCommand.ExecuteScalar();
+                            if (result != null)
+                            {
+                                courseId = Convert.ToInt32(result);
+                            }
+                            else
+                            {
+                                // If the course does not exist, insert it into Courses
+                                var addCourseQuery =
+                                    "INSERT INTO Courses (CourseName) VALUES (@Subject); SELECT SCOPE_IDENTITY();";
+                                using (var addCourseCommand = new SqlCommand(addCourseQuery, conn, transaction))
+                                {
+                                    addCourseCommand.Parameters.AddWithValue("@Subject", subject);
+                                    courseId = Convert.ToInt32(addCourseCommand.ExecuteScalar());
+                                    Console.WriteLine($"Course '{subject}' added with ID: {courseId}");
+                                }
+                            }
+                        }
+
+                        // Insert into Enrollments table to assign teacher to the course
+                        var assignTeacherQuery = @"
+                    INSERT INTO Enrollments (TeacherID_FK, CourseID_FK) 
+                    VALUES (@TeacherID, @CourseID)";
+                        using (var assignCommand = new SqlCommand(assignTeacherQuery, conn, transaction))
+                        {
+                            assignCommand.Parameters.AddWithValue("@TeacherID", teacherId);
+                            assignCommand.Parameters.AddWithValue("@CourseID", courseId);
+                            assignCommand.ExecuteNonQuery();
+                            Console.WriteLine("Teacher assigned to the course successfully.");
                         }
                     }
+                    transaction.Commit();
+                    Ui.Footer();
+                }
+                catch (Exception e)
+                {
+                    transaction.Rollback();
+                    Console.WriteLine("An error occured while executing: " + e.Message);
+                    Console.WriteLine("Error details: " + e.StackTrace);
                 }
             }
-            Ui.Footer();
         }
     }
 
@@ -330,7 +438,10 @@ public partial class DataService : DbContext
         using (var conn = new SqlConnection(ConnectionString))
         {
             conn.Open();
-            var sqlQuery = @"
+            try
+            {
+                //SQL query to fetch new grades 
+                var sqlQuery = @"
             SELECT s.FirstName + ' ' + s.LastName AS StudentFullName,
             c.CourseName,
             g.NumericGrade,
@@ -341,16 +452,25 @@ public partial class DataService : DbContext
             WHERE GradeSetDate >= DATEADD(MONTH, -1, GETDATE())
             ORDER BY g.GradeSetDate DESC";
 
-            using (var command = new SqlCommand(sqlQuery, conn))
-            {
-                using (var reader = command.ExecuteReader())
+                using (var command = new SqlCommand(sqlQuery, conn))
                 {
-                    var data = Ui.DataFormater(reader, "GradeSetDate");
-                    var table = Ui.CreateTable(data, "New Grades");
-                    AnsiConsole.Write(table);
-                    Ui.Footer();
+                    using (var reader = command.ExecuteReader())
+                    {
+                        //Formating the result using the DataFormater
+                        var data = Ui.DataFormater(reader, "GradeSetDate");
+                        var table = Ui.CreateTable(data, "New Grades");
+                        AnsiConsole.Write(table);
+                        Ui.Footer();
+                    }
                 }
             }
+            catch (Exception e)
+            {
+                Console.WriteLine("An error occured while executing: " + e.Message);
+                Console.WriteLine("Error details: " + e.StackTrace);
+                throw;
+            }
+           
         }
     }
    
@@ -360,8 +480,11 @@ public partial class DataService : DbContext
         using (var conn = new SqlConnection(ConnectionString))
         {
             conn.Open();
-            var sqlQuery = @"
-            SELECT s.FirstName + ' ' + s.LastName AS StudentFullName,
+            try
+            {
+                //SQL query to fetch all grades
+                var sqlQuery = @"
+            SELECT s.FirstName + ' ' + s.LastName AS StudentFullName, 
             c.CourseName,
             g.NumericGrade,
             g.GradeSetDate
@@ -370,18 +493,25 @@ public partial class DataService : DbContext
             JOIN Courses c ON e.CourseID_FK = c.CourseID
             ORDER BY StudentFullName DESC";
 
-           
-            using (var command = new SqlCommand(sqlQuery, conn))
-            {
-               
-                using (var reader = command.ExecuteReader())
+                using (var command = new SqlCommand(sqlQuery, conn))
                 {
-                    var data = Ui.DataFormater(reader, "GradeSetDate");
-                    var table = Ui.CreateTable(data, "New Grades");
-                    AnsiConsole.Write(table);
-                    Ui.Footer();
+                    using (var reader = command.ExecuteReader())
+                    {
+                        //Formating the result using the DataFormater
+                        var data = Ui.DataFormater(reader, "GradeSetDate");
+                        var table = Ui.CreateTable(data, "New Grades");
+                        AnsiConsole.Write(table);
+                        Ui.Footer();
+                    }
                 }
             }
+            catch (Exception e)
+            {
+                Console.WriteLine("An error occured while executing: " + e.Message);
+                Console.WriteLine("Error details: " + e.StackTrace);
+                throw;
+            }
+            
         }
     }
 
@@ -390,7 +520,7 @@ public partial class DataService : DbContext
         while (true)
         {
             Console.WriteLine(prompt);
-            var input = Console.ReadLine();
+            var input = Console.ReadLine()?.Trim();
 
             if (string.IsNullOrEmpty(input))
             {
@@ -398,8 +528,14 @@ public partial class DataService : DbContext
                 continue;
             }
 
-            if (MyRegex().IsMatch(input)) return input;
-            Console.WriteLine("Input can only contain alphanumeric characters.");
+            if (!MyRegex().IsMatch(input))
+            {
+                Console.WriteLine("Input can only contain letters (a-ö, A-Ö), spaces, hyphens, and apostrophes.");
+            }
+            else
+            {
+                return input;
+            }
         }
     }
 
