@@ -2,11 +2,12 @@ using System.Security.Principal;
 using System.Xml;
 using Labb3_Anropa_databasen.Data;
 using Labb3_Anropa_databasen.Models;
+using Microsoft.EntityFrameworkCore;
 using Spectre.Console;
 
 namespace Labb3_Anropa_databasen;
 
-public static class Menus
+public class Menus : DbContext
 {
     public static void DisplayMainMenu()
     {
@@ -56,7 +57,7 @@ public static class Menus
         var choice = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
                 .Title("\nWhat do you want to show?")
-                .AddChoices("All Staff", "Only Teachers", "Main Menu"));
+                .AddChoices("All Staff", "Only Teachers", "Staff by Department", "Main Menu"));
         switch (choice)
         {
             case "All Staff":
@@ -64,6 +65,9 @@ public static class Menus
                 break;
             case "Only Teachers":
                 DisplayTeachers();
+                break;
+            case "Staff by Department":
+                DisplayByDepartment();
                 break;
             case "Main Menu":
                 DisplayMainMenu();
@@ -94,7 +98,24 @@ public static class Menus
 
     public static void DisplayCourses()
     {
-        DataService.GetAllCourses();
+        
+        var choice = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("\nWhat do you want to show?")
+                .AddChoices("All Courses", "Active Courses", "Main Menu"));
+
+        switch (choice)
+        {
+            case "Show all Courses":
+                DataService.GetAllCourses();
+                break;
+            case "Show all Active Courses":
+                DataService.GetAllActiveCourses();
+                break;
+            case "Main Menu":
+                DisplayMainMenu();
+                return;
+        }
     }
 
     public static void AddStudent()
@@ -105,6 +126,11 @@ public static class Menus
     public static void AddStaff()
     {
         DataService.AddStaff();
+    }
+
+    public static void DisplayByDepartment()
+    {
+        DataService.TeachersByDepartment();
     }
 
     public static void ShowAllStudents()

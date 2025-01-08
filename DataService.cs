@@ -249,6 +249,65 @@ public partial class DataService : DbContext
         }
     }
 
+    public static void GetAllActiveCourses()
+    {
+        try
+        {
+            using (var context = new SchoolDbContext())
+            {
+                var activeCourses = context.Enrollments
+                        .GroupBy(e => e.CourseIdFk)
+                        .Where(g => g.Any())
+                        .Select(g => new
+                        {
+                            CourseId = g.Key,
+                            StudentCount = g.Count(),
+                            TeacherId = g.FirstOrDefault()!.TeacherIdFk
+                        })
+                        .Join(
+                            context.Courses,
+                            enrollment => enrollment.CourseId,
+                            course => course.CourseId,
+                            (enrollment, course) => new
+                            {
+                                course.CourseName,
+                                course.CourseId,
+                                enrollment.StudentCount,
+                                enrollment.TeacherId
+                            })
+                        .Join(
+                            context.Employees,
+                            courseWithTeacher => courseWithTeacher.TeacherId,
+                            teacher => teacher.TeacherId,
+                            (courseWithTeacher, teacher) => new
+                            {
+                                courseWithTeacher.CourseName,
+                                courseWithTeacher.CourseId,
+                                courseWithTeacher.StudentCount,
+                                TeacherName = $"{teacher.FirstName} {teacher.LastName}"
+                            })
+                        .ToList();
+
+                var data = activeCourses.Select(x => new Dictionary<string, string>
+                {
+                    { "Course ID", x.CourseId.ToString() },
+                    { "Course Name", x.CourseName },
+                    { "Student Count", x.StudentCount.ToString() },
+                    { "Teacher Name", x.TeacherName }
+                }).ToList();
+                var table = Ui.CreateTable(data, "Active Courses");
+                AnsiConsole.Write(table);
+                Ui.Footer();
+            }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine("An error occurred while retrieving teacher information: " + e.Message);
+            Console.WriteLine("Error details: " + e.StackTrace);
+            throw;
+        }
+    }
+
     public static void AddStudent() 
     {
         var firstName = CheckInput("Enter Student First Name: ");
@@ -512,6 +571,37 @@ public partial class DataService : DbContext
                 throw;
             }
             
+        }
+    }
+
+    public static void TeachersByDepartment()
+    {
+        try
+        {
+            using (var context = new SchoolDbContext())
+            {
+                var teachersPerDepartment = context.Employees
+                    .GroupBy(x => x.Role)
+                    .Select(g => new { Role = g.Key, TeacherCount = g.Count() })
+                    .ToList();
+
+                var data = teachersPerDepartment.Select(x => new Dictionary<string, string>
+                {
+                    { "Role", x.Role ?? "[Unknown Role]" }, 
+                    { "Amount of staff", x.TeacherCount.ToString() }
+                }).ToList();
+
+                
+                var table = Ui.CreateTable(data, "Staff Per Department");
+                AnsiConsole.Write(table);
+                Ui.Footer();
+            }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine("An error occurred while retrieving teacher information: " + e.Message);
+            Console.WriteLine("Error details: " + e.StackTrace);
+            throw;
         }
     }
 
